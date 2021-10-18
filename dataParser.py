@@ -11,8 +11,10 @@ def getPoliticalOrientation(newspaper):
         return "left-center"
     else:
         # randomly pick political orientation if it is unknown
-        # TODO pick accordingly to the distribution in the data
-        if random.random() > 0.5:
+        #   pick accordingly to the distribution in the data
+        #   9148 / 23474 = 0.3897077
+        #   results in 9106 (right-center) and 23516 (left-center)
+        if random.random() < 0.3897077:
             return "right-center"
         else:
             return "left-center"
