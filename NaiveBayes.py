@@ -42,6 +42,14 @@ class NaiveBayes(BaseModel):
             "action": None,
             "type": float,
             "help": "Percentage of the data that is used for the test set (default 0.20)"
+        },
+        {
+            "command": "-cv",
+            "refer": "--cv",
+            "default": 3,
+            "action": None,
+            "type:": int,
+            "help": "Determines the cross-validation splitting strategy"
         }
         ]
 
@@ -90,7 +98,7 @@ class NaiveBayes(BaseModel):
         model = self.create_model()
 
         # TODO optional GridSearch for value of e.g. alpha
-        return cross_validate(model, X_full, Y_full, cv=3, verbose=1)
+        return cross_validate(model, X_full, Y_full, cv=self.args.cv, verbose=1)
    
     
     # TODO remove because cross_validate does this for us
