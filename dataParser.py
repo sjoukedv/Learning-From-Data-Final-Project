@@ -7,7 +7,7 @@ np.random.seed(19680801)
 def getPoliticalOrientation(newspaper):
     if ("The Australian" in newspaper) or ("The Times of India" in newspaper) or ("The Times" in newspaper):
         return "right-center"
-    elif ("Sydney Morning Herald" in newspaper) or ("The Age" in newspaper) or ("The Hindu" in newspaper) or ("Mail and Guardian" in newspaper) or ("The Washington Post" in newspaper) or ("New York Times" in newspaper):
+    elif ("Sydney Morning Herald" in newspaper) or ("The Age" in newspaper) or ("The Hindu" in newspaper) or ("Mail & Guardian" in newspaper) or ("The Washington Post" in newspaper) or ("New York Times" in newspaper):
         return "left-center"
     else:
         # randomly pick political orientation if it is unknown
@@ -20,12 +20,12 @@ def getPoliticalOrientation(newspaper):
             return "left-center"
         
 def parsePoliticalOrientation(articles):
-    orientations = np.array([])
+    result = np.array([])
     for article in articles:
-        newspaper = article['newspaper']
-        orientations = np.append(orientations, getPoliticalOrientation(newspaper))
-    
-    return orientations
+        newArticle = article
+        newArticle['political_orientation'] = getPoliticalOrientation(article['newspaper'])
+        result = np.append(result, newArticle)
+    return result
 
 def read():
     files = Path("data").glob("**/*.json")
@@ -42,17 +42,13 @@ def read():
                     'collection_start' : rawJson['collection_start'],
                     'collection_end' : rawJson['collection_end']
                 },
-                "articles": rawJson['articles'],
-                "orientations": parsePoliticalOrientation(rawJson['articles'])
+                "articles": parsePoliticalOrientation(rawJson['articles'])
             }])
     
     return data    
 
 def mergeCopEditions(data):
     articles = []
-    orientations = []
     for elem in data:
-        articles = articles + elem['articles']
-        orientations = np.append(orientations, elem['orientations'])
-
-    return articles, orientations
+        articles = np.append(articles, elem['articles'])
+    return articles
