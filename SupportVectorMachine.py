@@ -89,7 +89,7 @@ class SupportVectorMachine(BaseModel):
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
         
         # Combine the union feature with a LinearSVC
-        return Pipeline([("union", union),('cls', LinearSVC(C=10))])
+        return Pipeline([("union", union),('cls', LinearSVC(C=0.1))])
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -97,7 +97,7 @@ class SupportVectorMachine(BaseModel):
         articles = mergeCopEditions(data)
 
         # extract features
-        X_full = [ article['body'] for article in articles]
+        X_full = [ article['headline'] for article in articles]
         Y_full = [ article['political_orientation'] for article in articles]
 
         model = self.create_model()
