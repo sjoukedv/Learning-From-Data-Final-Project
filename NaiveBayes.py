@@ -22,19 +22,35 @@ from BaseModel import BaseModel
 
 class NaiveBayes(BaseModel):
     def __init__(self):
-        self.name = "NaiveBayes"
-        self.args = self.create_arg_parser()
+        self.arguments = [
+        { 
+            "command": "-i",
+            "refer": "--input_file",
+            "default": "reviews.txt",
+            "action": None,
+            "type": str,
+            "help": "Input file to learn from (default reviews.txt)"
+        },
+        { 
+            "command": "-t",
+            "refer": "--tfidf",
+            "default": None,
+            "type": None,
+            "action": "store_true",
+            "help": "Use the TF-IDF vectorizer instead of CountVectorizer"
+        },
+        { 
+            "command": "-tp",
+            "refer": "--test_percentage",
+            "default": 0.20,
+            "action": None,
+            "type": float,
+            "help": "Percentage of the data that is used for the test set (default 0.20)"
+        }
+        ]
 
-    def create_arg_parser(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-i", "--input_file", default='reviews.txt', type=str,
-                            help="Input file to learn from (default reviews.txt)")
-        parser.add_argument("-t", "--tfidf", action="store_true",
-                            help="Use the TF-IDF vectorizer instead of CountVectorizer")
-        parser.add_argument("-tp", "--test_percentage", default=0.20, type=float,
-                            help="Percentage of the data that is used for the test set (default 0.20)")
-        args = parser.parse_args()
-        return args
+        super().__init__()
+        self.name = "NaiveBayes"
 
     def split_data(self, X_full, Y_full, test_percentage):
         ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
@@ -56,7 +72,9 @@ class NaiveBayes(BaseModel):
         data = read()
         #articles, orientations = mergeCopEditions(data)
         # The documents and labels are retrieved. 
-        X_full, Y_full = mergeCopEditions(data)
+        articles = mergeCopEditions(data)
+        X_full = [ article['political_orientation'] for article in articles]
+        Y_full = [ article['body'] for article in articles] 
 
         # Convert the texts to vectors
         # We use a dummy function as tokenizer and preprocessor,
@@ -97,13 +115,16 @@ class NaiveBayes(BaseModel):
 
     def evaluate_model(self, Y_pred, Y_test):
         results = classification_report(Y_test, Y_pred, digits=3, output_dict=True)
-        print(results)
         return results
 
     def perform_classification(self):
         # The documents and labels are retrieved. 
         data = read()
-        X_full, Y_full = mergeCopEditions(data)
+        articles = mergeCopEditions(data)
+
+        # extract features
+        Y_full = [ article['political_orientation'] for article in articles]
+        X_full = [ article['body'] for article in articles]
 
         # The documents and labels are split into a training and test set. 
         X_train, Y_train, X_test, Y_test = self.split_data(X_full, Y_full, 0.3)
@@ -118,12 +139,12 @@ class NaiveBayes(BaseModel):
 
         Y_pred = self.test_model(model, X_test)
 
-        self.results = self.evaluate_model(Y_pred, Y_test)
+        return self.evaluate_model(Y_pred, Y_test)
 
 if __name__ == "__main__":
     model = NaiveBayes()
-    model.perform_classification()
-    model.write_run_to_file("0", [], [])
+    results = model.perform_classification()
+    model.write_run_to_file("0", [], results)
     #args = create_arg_parser()
 
     #print("----Six-class classification----")
