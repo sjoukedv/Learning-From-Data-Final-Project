@@ -2,6 +2,11 @@
 
 '''Support Vector Machine classifier '''
 
+# DEBUG
+# fixes cudart64_110.dll error
+import os
+os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+
 import sys
 import argparse
 import random
@@ -48,6 +53,8 @@ class SupportVectorMachine(BaseModel):
 
         super().__init__()
         self.name = "SupportVectorMachine"
+        spacy.prefer_gpu()
+
         # load spacy
         self.nlp = spacy.load('en_core_web_sm')
 
@@ -77,7 +84,7 @@ class SupportVectorMachine(BaseModel):
         return [ token.pos_ for token in self.nlp(txt)]    
 
     def create_model(self):
-        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
+        count = CountVectorizer(tokenizer=self.spacy_pos)
         tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity,max_df=0.8, min_df=0.0001, ngram_range=(1,3))
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
         
