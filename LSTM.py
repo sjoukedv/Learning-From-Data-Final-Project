@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
-'''LSTM classifier '''
+'''LSTM fasttext classifier '''
 
 import sys
 import argparse
 import random
 import time
 import spacy
+import fasttext
+import numpy as np
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.svm import SVC, LinearSVC
@@ -49,45 +51,31 @@ class LSTM(BaseModel):
         super().__init__()
         self.name = "LSTM"
 
+    def split_data(self):
+        pass
 
-    # TODO remove because built-in functionality of cross_validate
-    def split_data(self, X_full, Y_full, test_percentage):
-        ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
-        ## The two training and two test sets are returned. 
-        split_point = int((1.0 - test_percentage)*len(X_full))
+    def perform_classification(self):
+        pass
 
-        X_train = X_full[:split_point]
-        Y_train = Y_full[:split_point]
-        X_test = X_full[split_point:]
-        Y_test = Y_full[split_point:]
-        return X_train, Y_train, X_test, Y_test
-
-
-    def identity(self, x):
-        '''Dummy function that just returns the input'''
-        return x
-
-    def create_model(self):
-        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
-        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity,max_df=0.8, min_df=0.0001, ngram_range=(1,3))
-        union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
-        
-        # Combine the union feature with a LinearSVC
-        return Pipeline([("union", union),('cls', LinearSVC(C=10))])
+    def create_model(self):        
+        pass
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
         data = read()
         articles = mergeCopEditions(data)
 
-        # extract features
-        X_full = [ article['body'] for article in articles]
-        Y_full = [ article['political_orientation'] for article in articles]
+        prepared_data = [ '__label__'+ article['political_orientation'] + ' ' +  article['headline'] for article in articles]
 
-        model = self.create_model()
+        split = len(prepared_data)//4 * 3
+        np.savetxt('fasttext_train.csv', prepared_data[:split], delimiter=',', fmt='%s')
+        np.savetxt('fasttext_test.csv', prepared_data[split:], delimiter=',', fmt='%s')
 
-        # TODO optional GridSearch for value of e.g. C
-        return cross_validate(model, X_full, Y_full, cv=3, verbose=1)
+        model = fasttext.train_supervised('fasttext_train.csv')
+        print(model)
+
+        # TODO optional GridSearch for values
+        return model.test('fasttext_test.csv')
 
 if __name__ == "__main__":
     lstm = LSTM()

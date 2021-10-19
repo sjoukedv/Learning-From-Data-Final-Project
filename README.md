@@ -4,3 +4,4 @@
 - numpy
 - spacy (also download `en_core_web_sm`)
 - matplotlib
+- fasttext
