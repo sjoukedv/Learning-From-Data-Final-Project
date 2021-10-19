@@ -125,7 +125,7 @@ class SupportVectorMachine(BaseModel):
 
     def create_model(self):
         count = CountVectorizer(tokenizer=self.spacy_pos)
-        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity,max_df=0.8, min_df=0.0001, ngram_range=(1,3))
+        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity,max_df=self.args.max_df, min_df=self.args.min_df, ngram_range=self.args.ngram_range)
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
         
         # Combine the union feature with a LinearSVC
