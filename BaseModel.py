@@ -48,9 +48,14 @@ class BaseModel(ABC):
     def perform_cross_validation(self):
         pass 
 
-    def write_run_to_file(self, version, parameters, results):
+    def write_run_to_file(self, parameters, results):
+        res_dir = 'results/' + self.name
         # make sure (sub)directory exists
-        os.makedirs('results/' + self.name, exist_ok=True)
+        os.makedirs(res_dir, exist_ok=True)
+
+        # retrieve version based on number of files in directory
+        path, dirs, files = next(os.walk(res_dir))
+        version = len(files)
 
         result = {
             'parameters' : parameters,

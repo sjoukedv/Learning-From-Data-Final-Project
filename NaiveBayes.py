@@ -127,4 +127,4 @@ if __name__ == "__main__":
     # results = nb.perform_classification()
 
     results = nb.perform_cross_validation()
-    nb.write_run_to_file("0", vars(nb.args), results)
+    nb.write_run_to_file(vars(nb.args), results)
