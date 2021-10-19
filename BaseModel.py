@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
-import pandas 
-
+import numpy as np
 class BaseModel(ABC):
     def __init__(self):
-        self.name = "Base model"
+        self.name = "BaseModel"
 
     @abstractmethod
     def create_model(self):
@@ -34,25 +32,5 @@ class BaseModel(ABC):
         pass 
 
     def write_run_to_file(self, version, parameters, results):
-        filename = "./nb_experiments/run_" + self.name + "_" + version
-
-        file1 = open(filename + ".txt","w")
-  
-        # \n is placed to indicate EOL (End of Line)
-        file1.write(self.name + ": " + "Experiment " + version + "\n")
-
-        for arg in vars(self.args):
-            file1.write(str(arg) + ": " + str(getattr(self.args, arg)) + "\n")
-
-        file1.close() #to change file access modes
-
-        df = pandas.DataFrame(self.results).transpose()
-        df.to_csv(filename + ".csv")
-
-
-
-
-    
-
-
-    
+        # results/NaiveBayes/experiment_01.csv
+        np.savetxt('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.csv', results, delimiter=",")
