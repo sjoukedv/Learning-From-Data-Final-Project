@@ -47,7 +47,7 @@ class SupportVectorMachine(BaseModel):
         ]
 
         super().__init__()
-        self.name = "NaiveBayes"
+        self.name = "SupportVectorMachine"
         # load spacy
         self.nlp = spacy.load('en_core_web_sm')
 
