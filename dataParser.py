@@ -11,6 +11,7 @@ def getPoliticalOrientation(newspaper):
         return "left-center"
     else:
         # randomly pick political orientation if it is unknown
+        #   does not occur in this dataset
         #   pick accordingly to the distribution in the data
         #   9148 / 23474 = 0.3897077
         #   results in 9106 (right-center) and 23516 (left-center)
