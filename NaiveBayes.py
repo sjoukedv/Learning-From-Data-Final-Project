@@ -6,18 +6,14 @@ import sys
 import argparse
 import random
 import time
+
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html
-from sklearn.metrics import precision_score # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_score.html
-from sklearn.metrics import recall_score # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.recall_score.html
-from sklearn.metrics import f1_score # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html
-from sklearn.metrics import confusion_matrix # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
-from sklearn.model_selection import cross_validate, cross_val_predict, cross_val_score
+from sklearn.metrics import classification_report, accuracy_score, make_scorer
+from sklearn.model_selection import cross_validate, cross_val_score
 
 from dataParser import read, mergeCopEditions
-from sklearn.metrics import classification_report
 from BaseModel import BaseModel 
 
 class NaiveBayes(BaseModel):
@@ -52,6 +48,7 @@ class NaiveBayes(BaseModel):
         super().__init__()
         self.name = "NaiveBayes"
 
+    # TODO remove because built-in functionality of cross_validate
     def split_data(self, X_full, Y_full, test_percentage):
         ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
         ## The two training and two test sets are returned. 
@@ -68,28 +65,6 @@ class NaiveBayes(BaseModel):
         '''Dummy function that just returns the input'''
         return x
 
-    def perform_cross_validation(self, use_sentiment, input_file):
-        data = read()
-        #articles, orientations = mergeCopEditions(data)
-        # The documents and labels are retrieved. 
-        articles = mergeCopEditions(data)
-        X_full = [ article['political_orientation'] for article in articles]
-        Y_full = [ article['body'] for article in articles] 
-
-        # Convert the texts to vectors
-        # We use a dummy function as tokenizer and preprocessor,
-        # since the texts are already preprocessed and tokenized.
-        if self.args.tfidf:
-            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
-        else:
-            # Bag of Words vectorizer
-            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
-
-        # Combine the vectorizer with a Naive Bayes classifier
-        classifier = Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))])
-
-        print("Cross validation test scores: {}".format(cross_validate(classifier, X_full, Y_full, cv=5)['test_score']))
-
     def create_model(self):
         # Convert the texts to vectors
         # We use a dummy function as tokenizer and preprocessor,
@@ -101,22 +76,24 @@ class NaiveBayes(BaseModel):
             vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
 
         # Combine the vectorizer with a Naive Bayes classifier
-        classifier = Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))])
+        return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))])
 
-        return classifier
+    def perform_cross_validation(self):
+        # The documents and labels are retrieved. 
+        data = read()
+        articles = mergeCopEditions(data)
 
-    def train_model(self, model, X_train, Y_train):
-        # The must be fitted to the model. Meaning that it must learn from the model. Done by passing the training set to the fit method. 
-        return model.fit(X_train, Y_train)
+        # extract features
+        X_full = [ article['body'] for article in articles]
+        Y_full = [ article['political_orientation'] for article in articles]
 
-    def test_model(self, model, X_test):
-        # The fitted classifier is used to do a prediction based on the test documents. 
-        return model.predict(X_test)
+        model = self.create_model()
 
-    def evaluate_model(self, Y_pred, Y_test):
-        results = classification_report(Y_test, Y_pred, digits=3, output_dict=True)
-        return results
-
+        # TODO optional GridSearch for value of e.g. alpha
+        return cross_validate(model, X_full, Y_full, cv=3, verbose=1)
+   
+    
+    # TODO remove because cross_validate does this for us
     def perform_classification(self):
         # The documents and labels are retrieved. 
         data = read()
@@ -131,24 +108,23 @@ class NaiveBayes(BaseModel):
 
         model = self.create_model()
 
-        t0 = time.time()
+        # DEBUG
+        # t0 = time.time()
 
-        model = self.train_model(model, X_train, Y_train)
+        model = model.fit(X_train, Y_train)
 
-        print("Training time: ", time.time() - t0)
+        # DEBUG
+        # print("Training time: ", time.time() - t0)
 
-        Y_pred = self.test_model(model, X_test)
+        Y_pred = model.predict(X_test)
 
-        return self.evaluate_model(Y_pred, Y_test)
+        return classification_report(Y_test, Y_pred, digits=3, output_dict=True)
 
 if __name__ == "__main__":
-    model = NaiveBayes()
-    results = model.perform_classification()
-    model.write_run_to_file("0", [], results)
-    #args = create_arg_parser()
-
-    #print("----Six-class classification----")
-    #perform_classification(False, args.input_file)
-    #print("----Cross-validate results----")
-    #perform_cross_validation(False, args.input_file)
+    nb = NaiveBayes()
     
+    # DEBUG 
+    # results = nb.perform_classification()
+
+    results = nb.perform_cross_validation()
+    nb.write_run_to_file("0", vars(nb.args), results)
