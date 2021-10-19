@@ -130,3 +130,6 @@ dmypy.json
 
 # COP Data files
 data/
+
+# LSTM Fasttext files
+fasttext*
