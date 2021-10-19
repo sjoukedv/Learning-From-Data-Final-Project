@@ -25,30 +25,70 @@ from BaseModel import BaseModel
 class SupportVectorMachine(BaseModel):
     def __init__(self):
         self.arguments = [
-        { 
-            "command": "-i",
-            "refer": "--input_file",
-            "default": "reviews.txt",
-            "action": None,
-            "type": str,
-            "help": "Input file to learn from (default reviews.txt)"
-        },
-        { 
-            "command": "-t",
-            "refer": "--tfidf",
-            "default": None,
-            "type": None,
-            "action": "store_true",
-            "help": "Use the TF-IDF vectorizer instead of CountVectorizer"
-        },
-        { 
-            "command": "-tp",
-            "refer": "--test_percentage",
-            "default": 0.20,
-            "action": None,
-            "type": float,
-            "help": "Percentage of the data that is used for the test set (default 0.20)"
-        }
+            { 
+                "command": "-i",
+                "refer": "--input_file",
+                "default": "reviews.txt",
+                "action": None,
+                "type": str,
+                "help": "Input file to learn from (default reviews.txt)"
+            },
+            { 
+                "command": "-t",
+                "refer": "--tfidf",
+                "default": None,
+                "type": None,
+                "action": "store_true",
+                "help": "Use the TF-IDF vectorizer instead of CountVectorizer"
+            },
+            { 
+                "command": "-tp",
+                "refer": "--test_percentage",
+                "default": 0.20,
+                "action": None,
+                "type": float,
+                "help": "Percentage of the data that is used for the test set (default 0.20)"
+            },
+            {
+                "command": "-cv",
+                "refer": "--cv",
+                "default": 3,
+                "action": None,
+                "type:": int,
+                "help": "Determines the cross-validation splitting strategy"
+            },
+            {
+                "command": "-C",
+                "refer": "--C",
+                "default": 0.1,
+                "action": None,
+                "type:": float,
+                "help": "Regularization parameter"
+            },
+            {
+                "command": "-min_df",
+                "refer": "--min_df",
+                "default": 0.0001,
+                "action": None,
+                "type:": float,
+                "help": "Minimum document frequency"
+            },
+            {
+                "command": "-max_df",
+                "refer": "--max_df",
+                "default": 0.8,
+                "action": None,
+                "type:": float,
+                "help": "Maximum document frequency"
+            },
+            {
+                "command": "-ngram_range",
+                "refer": "--ngram_range",
+                "default": (1,3),
+                "action": None,
+                "type:": tuple,
+                "help": "The lower and upper boundary of the range of n-value for different n-grams"
+            },
         ]
 
         super().__init__()
@@ -89,7 +129,7 @@ class SupportVectorMachine(BaseModel):
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
         
         # Combine the union feature with a LinearSVC
-        return Pipeline([("union", union),('cls', LinearSVC(C=0.1))])
+        return Pipeline([("union", union),('cls', LinearSVC(C=self.args.C))])
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -103,7 +143,7 @@ class SupportVectorMachine(BaseModel):
         model = self.create_model()
 
         # TODO optional GridSearch for value of e.g. C
-        return cross_validate(model, X_full, Y_full, cv=3, verbose=1)
+        return cross_validate(model, X_full, Y_full, cv=self.args.cv, verbose=1)
    
     
     # TODO remove because cross_validate does this for us
