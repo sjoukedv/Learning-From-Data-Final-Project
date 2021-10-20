@@ -133,3 +133,5 @@ data/
 
 # LSTM Fasttext files
 fasttext*
+# pre-trained vectors
+cc.en.300.bin
