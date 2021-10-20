@@ -8,11 +8,13 @@ import random
 import time
 import spacy
 import fasttext
+import os
+import json
 import numpy as np
 import tensorflow as tf
 
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout, Embedding, Activation
+from keras.layers import LSTM, Dense, Dropout, Embedding, Activation, GlobalAveragePooling1D
 from keras.initializers import Constant
 from tensorflow.keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
 
@@ -78,19 +80,15 @@ class LSTM_Embeddings(BaseModel):
         return np.array([ model.get_sentence_vector(sample)for sample in samples])
 
     def create_model(self, X_train, Y_train): 
-        print('Y_shape', Y_train.shape)
-        print('X_shape', X_train.shape)
         model = Sequential()
         model.add(Embedding(100, 100, trainable=False))
-        
-        model.add(LSTM(units=32, dropout=0.2))
-     
-        model.add(Dense(1, activation='softmax'))
+        model.add(LSTM(units=128, dropout=0.2))
+        model.add(Dense(1, activation='sigmoid'))
 
         # TODO remove debug
-        print(model.summary())
+        # print(model.summary())
 
-        model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate=0.1), metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer=SGD(learning_rate=0.001), metrics=['accuracy'])
         return model
 
     def train_model(self, model, X_train, Y_train):
@@ -98,14 +96,38 @@ class LSTM_Embeddings(BaseModel):
         # Potentially change these to cmd line args again
         # And yes, don't be afraid to experiment!
         verbose = 1
-        epochs = 10 #default 10
+        epochs = 5 #default 10
         batch_size = 32 #default 32
         # 10 percent of the training data we use to keep track of our training process
         # Use it to prevent overfitting!
         validation_split = 0.1
         # Finally fit the model to our data
-        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, batch_size=batch_size, validation_split=validation_split)
+        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, batch_size=batch_size)
         return model
+
+    def write_run_to_file(self, parameters, results):
+        res_dir = 'results/' + self.name
+        # make sure (sub)directory exists
+        os.makedirs(res_dir, exist_ok=True)
+
+        # retrieve version based on number of files in directory
+        path, dirs, files = next(os.walk(res_dir))
+        version = len(files)
+
+        result = {
+            'parameters' : parameters,
+            'results' : results
+            }
+
+        # convert array to list
+        # TODO fix this loop
+        for res in results:
+            if hasattr(results[res], "__len__"):
+                result['results'][res] = results[res].tolist()
+
+        # write results to file
+        json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
+
         
 
     def perform_cross_validation(self):
@@ -127,17 +149,14 @@ class LSTM_Embeddings(BaseModel):
         # Perform KFold Cross Validation
         kfold = KFold(n_splits=3, shuffle=True)
         results = []
+        n_fold = 1
         for train, test in kfold.split(embedded_data, labels):
-            
             model = self.create_model(embedded_data[train], labels[train])
             model = self.train_model(model, embedded_data[train], labels[train])
            
-
             scores = model.evaluate(embedded_data[test], labels[test], verbose=0)
-            results.append(scores)
-
-            # TODO remove
-            sys.exit(0)
+            results.append({n_fold: scores})
+            n_fold += 1
 
         # TODO optional GridSearch for values
         return results
