@@ -42,27 +42,22 @@ class NaiveBayes(BaseModel):
         super().__init__()
         self.name = "NaiveBayes"
 
-    # TODO remove because built-in functionality of cross_validate
-    def split_data(self, X_full, Y_full, test_percentage):
-        pass
-
-
     def identity(self, x):
-        '''Dummy function that just returns the input'''
-        return x
+        '''Dummy function that just returns the lowercase of the input'''
+        return x.lower()
 
     def create_model(self):
         # Convert the texts to vectors
         # We use a dummy function as tokenizer and preprocessor,
         # since the texts are already preprocessed and tokenized.
         if self.args.tfidf:
-            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, lowercase=False)
+            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
         else:
             # Bag of Words vectorizer
-            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity, lowercase=False)
+            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
 
         # Combine the vectorizer with a Naive Bayes classifier
-
+        # Use GridSearch to find the best combination of parameters
         return GridSearchCV(
             estimator=Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))]),
             param_grid={
@@ -72,7 +67,7 @@ class NaiveBayes(BaseModel):
             cv=self.args.cv,
             verbose=2
             )
-      
+
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -85,6 +80,8 @@ class NaiveBayes(BaseModel):
 
         model = self.create_model()
         model.fit(X_full, Y_full)
+        print(f'best score {model.best_score_} with params {model.best_params_}')
+
         return model
    
     def perform_classification(self):
