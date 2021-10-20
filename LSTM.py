@@ -115,11 +115,9 @@ class LSTM_Embeddings(BaseModel):
 
         prepared_data = [ article['headline'] for article in articles]
 
-        # TODO use a predefined set of vectors
-        # https://ppasumarthi-69210.medium.com/word-embeddings-in-keras-be6bb3092831
         # Transform words to fasttext embeddings
-        np.savetxt('fasttext_raw.csv', prepared_data, delimiter=',', fmt='%s')
-        fasttext_model = fasttext.train_unsupervised('fasttext_raw.csv')
+        # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
+        fasttext_model = fasttext.load_model('cc.en.300.bin')
         embedded_data = self.vectorizer(prepared_data, fasttext_model)
 
         # Transform string labels to one-hot encodings
