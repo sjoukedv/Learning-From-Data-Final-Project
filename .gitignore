@@ -130,3 +130,8 @@ dmypy.json
 
 # COP Data files
 data/
+
+# LSTM Fasttext files
+fasttext*
+# pre-trained vectors
+cc.en.300.bin

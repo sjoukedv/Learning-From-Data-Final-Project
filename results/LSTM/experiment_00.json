@@ -1,0 +1,1 @@
+{"parameters": {"input_file": "reviews.txt", "tfidf": null, "test_percentage": 0.2}, "results": [1068, 0.8576779026217228, 0.8576779026217228]}
