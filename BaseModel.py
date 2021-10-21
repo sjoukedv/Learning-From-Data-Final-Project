@@ -33,10 +33,6 @@ class BaseModel(ABC):
         return args
 
     @abstractmethod
-    def split_data(self):
-        pass
-
-    @abstractmethod
     def create_model(self):
         pass 
 
@@ -65,7 +61,10 @@ class BaseModel(ABC):
         # convert array to list
         # TODO comment this for loop when using single classification
         for res in results:
+            if res == 'params':
+                continue
             if hasattr(results[res], "__len__"):
+                print(res)
                 result['results'][res] = results[res].tolist()
 
         # write results to file
