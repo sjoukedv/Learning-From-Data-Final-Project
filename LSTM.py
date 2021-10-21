@@ -17,6 +17,7 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout, Embedding, Activation, GlobalAveragePooling1D
 from keras.initializers import Constant
 from tensorflow.keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
+from keras.callbacks import EarlyStopping
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.svm import SVC, LinearSVC
@@ -77,18 +78,15 @@ class LSTM_Embeddings(BaseModel):
     def vectorizer(self, samples, model):
         '''Turn sentence into embeddings, i.e. replace words by the fasttext word vector '''
         # return np.array([ [model.get_word_vector(word) for word in sample] for sample in samples])
-        return np.array([ model.get_sentence_vector(sample)for sample in samples])
+        return np.array([ model.get_sentence_vector(sample) for sample in samples])
 
     def create_model(self, X_train, Y_train): 
         model = Sequential()
-        model.add(Embedding(100, 100, trainable=False))
+        model.add(Embedding(300, 300, trainable=False))
         model.add(LSTM(units=128, dropout=0.2))
         model.add(Dense(1, activation='sigmoid'))
 
-        # TODO remove debug
-        # print(model.summary())
-
-        model.compile(loss='binary_crossentropy', optimizer=SGD(learning_rate=0.001), metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer=SGD(learning_rate=0.1), metrics=['accuracy'])
         return model
 
     def train_model(self, model, X_train, Y_train):
@@ -101,8 +99,11 @@ class LSTM_Embeddings(BaseModel):
         # 10 percent of the training data we use to keep track of our training process
         # Use it to prevent overfitting!
         validation_split = 0.1
+
+        early_acc = EarlyStopping(monitor='accuracy', patience=1)
+
         # Finally fit the model to our data
-        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, batch_size=batch_size)
+        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, batch_size=batch_size, callbacks=[early_acc])
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -119,6 +120,7 @@ class LSTM_Embeddings(BaseModel):
             'results' : results
             }
 
+        print(results)
         # convert array to list
         # TODO fix this loop
         for res in results:
