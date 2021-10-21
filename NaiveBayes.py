@@ -67,7 +67,7 @@ class NaiveBayes(BaseModel):
         # Combine the vectorizer with a Naive Bayes classifier
         # Use GridSearch to find the best combination of parameters
         return GridSearchCV(
-            estimator=Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))]),
+            estimator=Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.75, fit_prior=True))]),
             param_grid={
                 'cls__alpha': [1.0, 0.75, 0.5],
                 # 'cls__fit_prior': [True, False],
