@@ -26,7 +26,7 @@ from sklearn.metrics import classification_report, accuracy_score, make_scorer
 from sklearn.model_selection import cross_validate, cross_val_score, KFold
 from sklearn.preprocessing import LabelBinarizer
 
-from dataParser import read, mergeCopEditions
+from dataParser import read, read_single, mergeCopEditions
 from BaseModel import BaseModel 
 
 class LSTM_Embeddings(BaseModel):
@@ -61,19 +61,35 @@ class LSTM_Embeddings(BaseModel):
         super().__init__()
         self.name = "LSTM"
 
-    def split_data(self, X_full, Y_full, test_percentage):
-        ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
-        ## The two training and two test sets are returned. 
-        split_point = int((1.0 - test_percentage)*len(X_full))
-
-        X_train = X_full[:split_point]
-        Y_train = Y_full[:split_point]
-        X_test = X_full[split_point:]
-        Y_test = Y_full[split_point:]
-        return X_train, Y_train, X_test, Y_test
-
     def perform_classification(self):
-        pass
+        # The documents and labels are retrieved. 
+        data = read()
+        articles = mergeCopEditions(data)
+
+        prepared_data = [ article['headline'] for article in articles]
+        
+        # Transform words to fasttext embeddings
+        # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
+        fasttext_model = fasttext.load_model('cc.en.300.bin')
+        embedded_data = self.vectorizer(prepared_data, fasttext_model)
+        labels = [ article['political_orientation'] for article in articles]
+
+        # Transform string labels to one-hot encodings
+        encoder = LabelBinarizer()
+        labels = encoder.fit_transform([ article['political_orientation'] for article in articles])  # Use encoder.classes_ to find mapping back
+
+        # create and train model
+        model = self.create_model(embedded_data, labels)
+        model = self.train_model(model, embedded_data, labels)
+
+        # read and convert test data
+        test_articles = read_single(self.args.test_file)
+        test_prepared_data = [ article['headline'] for article in test_articles]
+        test_embedded_data = self.vectorizer(test_prepared_data, fasttext_model)
+        true_articles =  [ article['political_orientation'] for article in test_articles]
+           
+        print(model.evaluate(test_embedded_data, true_articles, verbose=1))
+
 
     def vectorizer(self, samples, model):
         '''Turn sentence into embeddings, i.e. replace words by the fasttext word vector '''
@@ -165,5 +181,11 @@ class LSTM_Embeddings(BaseModel):
 
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
-    results = lstm.perform_cross_validation()
-    lstm.write_run_to_file(vars(lstm.args), results)
+
+    # run test
+    if lstm.args.test_file:
+        lstm.perform_classification()
+    # run dev
+    else:
+        results = lstm.perform_cross_validation()
+        lstm.write_run_to_file(vars(lstm.args), results)
