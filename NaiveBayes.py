@@ -2,18 +2,14 @@
 
 '''Naive bayes classifier '''
 
-import sys
-import argparse
-import random
-import time
 import os
 import json
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import classification_report, accuracy_score, make_scorer
-from sklearn.model_selection import cross_validate, cross_val_score, GridSearchCV
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
 
 from dataParser import read, read_single, mergeCopEditions
 from BaseModel import BaseModel 
@@ -38,7 +34,7 @@ class NaiveBayes(BaseModel):
             "help": "Determines the cross-validation splitting strategy"
         },
             { 
-            "command": "-i",
+            "command": "-ts",
             "refer": "--test_file",
             "default": None,
             "action": None,
