@@ -48,6 +48,12 @@ def read():
     
     return data    
 
+def read_single(path):
+    with open(path) as json_file:
+        
+        rawJson = json.load(json_file)
+        return parsePoliticalOrientation(rawJson['articles'])
+
 def mergeCopEditions(data):
     articles = []
     for elem in data:
