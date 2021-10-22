@@ -81,12 +81,7 @@ class LSTM_Embeddings(BaseModel):
             'results' : results
             }
 
-        # convert array to list
-        for res in results:
-            if hasattr(results[res], "__len__"):
-                result['results'][res] = results[res].tolist()
-
-        # write results to file
+      # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w')) 
 
     def perform_classification(self):
