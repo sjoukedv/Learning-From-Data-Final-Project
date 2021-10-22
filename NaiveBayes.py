@@ -60,19 +60,21 @@ class NaiveBayes(BaseModel):
             # Bag of Words vectorizer
             vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
 
+        self.param_grid = {
+                'cls__alpha': [1.0, 0.75, 0.5],
+                # 'cls__fit_prior': [True, False],
+                # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
+                'vec__analyzer': ['word', 'char', 'char_wb'],
+                # 'vec__max_df': [1.0, 0.9, 0.8],
+                # 'vec__min_df': [1, 0.9, 0.8],
+                'vec__max_features': [4,8, None],
+            }
+
         # Combine the vectorizer with a Naive Bayes classifier
         # Use GridSearch to find the best combination of parameters
         return GridSearchCV(
             estimator=Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.75, fit_prior=True))]),
-            param_grid={
-                'cls__alpha': [1.0, 0.75, 0.5],
-                # 'cls__fit_prior': [True, False],
-                # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
-                # 'vec__analyzer': ['word', 'char', 'char_wb'],
-                # 'vec__max_df': [1.0, 0.9, 0.8],
-                # 'vec__min_df': [1, 0.9, 0.8],
-                'vec__max_features': [4,8,16, None],
-            },
+            param_grid=self.param_grid,
             cv=self.args.cv,
             verbose=2
             )
@@ -82,14 +84,14 @@ class NaiveBayes(BaseModel):
         # We use a dummy function as tokenizer and preprocessor,
         # since the texts are already preprocessed and tokenized.
         if self.args.tfidf:
-            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
+            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='word', max_features=None)
         else:
             # Bag of Words vectorizer
-            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
+            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='char_wb', max_features=None)
 
         # Combine the vectorizer with a Naive Bayes classifier
         # Use GridSearch to find the best combination of parameters
-        return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=1.0, fit_prior=True))])
+        return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.5, fit_prior=True))])
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -141,7 +143,8 @@ class NaiveBayes(BaseModel):
             'parameters' : parameters,
             'results' : results.cv_results_,
             'best_score': results.best_score_,
-            'best_params': results.best_params_
+            'best_params': results.best_params_,
+            'param_grid': self.param_grid,
             }
 
         for res in results.cv_results_:
