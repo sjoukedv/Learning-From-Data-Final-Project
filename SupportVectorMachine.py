@@ -5,7 +5,7 @@
 # DEBUG
 # fixes cudart64_110.dll error
 import os
-os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+#os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
 
 import sys
 import argparse
@@ -21,6 +21,7 @@ from sklearn.model_selection import cross_validate, cross_val_score
 
 from dataParser import read, mergeCopEditions
 from BaseModel import BaseModel 
+from sklearn.model_selection import GridSearchCV
 
 class SupportVectorMachine(BaseModel):
     def __init__(self):
@@ -62,7 +63,7 @@ class SupportVectorMachine(BaseModel):
                 "refer": "--C",
                 "default": 0.1,
                 "action": None,
-                "type:": float,
+                "type": float,
                 "help": "Regularization parameter"
             },
             {
@@ -70,7 +71,7 @@ class SupportVectorMachine(BaseModel):
                 "refer": "--min_df",
                 "default": 0.0001,
                 "action": None,
-                "type:": float,
+                "type": float,
                 "help": "Minimum document frequency"
             },
             {
@@ -78,7 +79,7 @@ class SupportVectorMachine(BaseModel):
                 "refer": "--max_df",
                 "default": 0.8,
                 "action": None,
-                "type:": float,
+                "type": float,
                 "help": "Maximum document frequency"
             },
             {
@@ -86,7 +87,7 @@ class SupportVectorMachine(BaseModel):
                 "refer": "--ngram_range",
                 "default": (1,3),
                 "action": None,
-                "type:": tuple,
+                "type": tuple,
                 "help": "The lower and upper boundary of the range of n-value for different n-grams"
             },
         ]
@@ -112,8 +113,8 @@ class SupportVectorMachine(BaseModel):
 
 
     def identity(self, x):
-        '''Dummy function that just returns the input'''
-        return x
+        '''Dummy function that just returns the lowercase of the input'''
+        return x.lower()
 
     def smartJoin(self, x):
         # transform list into string
@@ -124,13 +125,28 @@ class SupportVectorMachine(BaseModel):
         return [ token.pos_ for token in self.nlp(txt)]    
 
     def create_model(self):
-        count = CountVectorizer(tokenizer=self.spacy_pos)
-        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity,max_df=self.args.max_df, min_df=self.args.min_df, ngram_range=self.args.ngram_range)
+        count = CountVectorizer(preprocessor=self.identity, tokenizer=self.spacy_pos)
+        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
-        
-        # Combine the union feature with a LinearSVC
-        return Pipeline([("union", union),('cls', LinearSVC(C=self.args.C))])
 
+        self.param_grid = {
+            'union__tf_idf__max_df': [1.0, 0.75, 0.5],
+            'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
+            'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
+            'cls__C': [0.1, 0.5, 0.05]
+        }
+
+        print(Pipeline([("union", union),('cls', LinearSVC())]).get_params().keys())
+
+        return GridSearchCV(
+            # Combine the union feature with a LinearSVC
+            estimator=Pipeline([("union", union),('cls', LinearSVC())]),
+            param_grid=self.param_grid,
+            cv=self.args.cv,
+            verbose=2
+        )
+        
+        
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
         data = read()
@@ -141,9 +157,12 @@ class SupportVectorMachine(BaseModel):
         Y_full = [ article['political_orientation'] for article in articles]
 
         model = self.create_model()
+        model.fit(X_full, Y_full)
+        print(f'best score {model.best_score_} with params {model.best_params_}')
+        return model 
 
         # TODO optional GridSearch for value of e.g. C
-        return cross_validate(model, X_full, Y_full, cv=self.args.cv, verbose=1)
+        #return cross_validate(model, X_full, Y_full, cv=self.args.cv, verbose=1)
    
     
     # TODO remove because cross_validate does this for us
