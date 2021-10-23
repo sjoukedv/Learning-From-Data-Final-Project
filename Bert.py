@@ -63,7 +63,7 @@ class Bert(BaseModel):
         ]
 
         super().__init__()
-        self.name = "LSTM"
+        self.name = "Bert"
 
     def split_data(self, X_full, Y_full, test_percentage):
         ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
@@ -134,9 +134,6 @@ class Bert(BaseModel):
         print(results)
         # convert array to list
         # TODO fix this loop
-        for res in results:
-            if hasattr(results[res], "__len__"):
-                result['results'][res] = results[res].tolist()
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
@@ -165,8 +162,7 @@ class Bert(BaseModel):
         results = []
         n_fold = 1
 
-        for train_index, test_index in kfold.split(prepared_data, labels):
-            print(prepared_data[train_index])
+        for train_index, test_index in kfgit adold.split(prepared_data, labels):
             tokens_train = tokenizer(prepared_data[train_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
             tokens_test = tokenizer(prepared_data[test_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
 
@@ -186,5 +182,8 @@ class Bert(BaseModel):
 
 if __name__ == "__main__":
     bert = Bert()
-    results = bert.perform_cross_validation()
-    bert.write_run_to_file(vars(bert.args), results)
+    #results = bert.perform_cross_validation()
+
+    test_results = [{1: [0.307935893535614, 0.9006993174552917]}, {2: [0.1817009150981903, 0.9230769276618958]}]
+
+    bert.write_run_to_file(vars(bert.args), test_results)
