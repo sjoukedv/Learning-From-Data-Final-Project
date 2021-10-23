@@ -69,3 +69,4 @@ class BaseModel(ABC):
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
+        
