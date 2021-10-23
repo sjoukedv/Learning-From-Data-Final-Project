@@ -33,11 +33,7 @@ def read():
 
     data = np.array([])
 
-    count = 0
-
     for file in files:
-        if count > 1:
-            break
         with open(file) as json_file:
           
             rawJson = json.load(json_file)
@@ -49,7 +45,6 @@ def read():
                 },
                 "articles": parsePoliticalOrientation(rawJson['articles'])
             }])
-            count = count + 1
     
     return data    
 
