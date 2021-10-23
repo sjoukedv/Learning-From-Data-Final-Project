@@ -45,14 +45,6 @@ class Bert(BaseModel):
             "help": "Input file to learn from (default reviews.txt)"
         },
         { 
-            "command": "-t",
-            "refer": "--tfidf",
-            "default": None,
-            "type": None,
-            "action": "store_true",
-            "help": "Use the TF-IDF vectorizer instead of CountVectorizer"
-        },
-        { 
             "command": "-tp",
             "refer": "--test_percentage",
             "default": 0.20,
@@ -65,25 +57,11 @@ class Bert(BaseModel):
         super().__init__()
         self.name = "Bert"
 
-    def split_data(self, X_full, Y_full, test_percentage):
-        ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
-        ## The two training and two test sets are returned. 
-        split_point = int((1.0 - test_percentage)*len(X_full))
-
-        X_train = X_full[:split_point]
-        Y_train = Y_full[:split_point]
-        X_test = X_full[split_point:]
-        Y_test = Y_full[split_point:]
-        return X_train, Y_train, X_test, Y_test
-
-    def perform_classification(self):
-        pass
-
     def vectorizer(self, samples, model):
         '''Turn sentence into embeddings, i.e. replace words by the fasttext word vector '''
-        # return np.array([ [model.get_word_vector(word) for word in sample] for sample in samples])
         return np.array([ model.get_sentence_vector(sample) for sample in samples])
 
+    # Create the model 
     def create_model(self, model): 
         loss_function = SparseCategoricalCrossentropy(from_logits=True)
 
@@ -102,19 +80,20 @@ class Bert(BaseModel):
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
         return model
 
+    # Train the model
     def train_model(self, model, tokens_train, tokens_test, Y_train_bin, Y_test_bin):
         '''Train the model here. Note the different settings you can experiment with!'''
-        # Potentially change these to cmd line args again
-        # And yes, don't be afraid to experiment!
         verbose = 2
-        epochs = 5 #default 10
+        epochs = 50 #default 10
         batch_size = 16 #default 32
-        # 10 percent of the training data we use to keep track of our training process
-        # Use it to prevent overfitting!
+
         validation_data = (tokens_test, Y_test_bin)
 
+        # Early stopping: stop training when there are three consecutive epochs without improving
+        callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
+
         # Finally fit the model to our data
-        model.fit(tokens_train, Y_train_bin, verbose=verbose, epochs=epochs, batch_size=batch_size, validation_data=(tokens_test, Y_test_bin))
+        model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=epochs, batch_size=batch_size, validation_data=(tokens_test, Y_test_bin))
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -129,16 +108,16 @@ class Bert(BaseModel):
         result = {
             'parameters' : parameters,
             'results' : results
-            }
+        }
 
+        # DEBUG
         print(results)
-        # convert array to list
-        # TODO fix this loop
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
-        
+    def perform_classification(self):
+        pass
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -162,7 +141,7 @@ class Bert(BaseModel):
         results = []
         n_fold = 1
 
-        for train_index, test_index in kfgit adold.split(prepared_data, labels):
+        for train_index, test_index in kfold.split(prepared_data, labels):
             tokens_train = tokenizer(prepared_data[train_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
             tokens_test = tokenizer(prepared_data[test_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
 
@@ -172,18 +151,18 @@ class Bert(BaseModel):
             model = self.create_model(model) 
             model = self.train_model(model, tokens_train, tokens_test, Y_train_bin, Y_test_bin)
            
-            #scores = model.predict(tokens_test)["logits"]
-            scores = model.evaluate(tokens_test, Y_test_bin, verbose=0)
+            scores = model.evaluate(tokens_test, Y_test_bin, verbose=2)
             results.append({n_fold: scores})
             n_fold += 1
 
-        # TODO optional GridSearch for values
         return results
 
 if __name__ == "__main__":
     bert = Bert()
-    #results = bert.perform_cross_validation()
+    
+    results = bert.perform_cross_validation()
 
-    test_results = [{1: [0.307935893535614, 0.9006993174552917]}, {2: [0.1817009150981903, 0.9230769276618958]}]
+    # DEBUG
+    #test_results = [{1: [0.307935893535614, 0.9006993174552917]}, {2: [0.1817009150981903, 0.9230769276618958]}]
 
-    bert.write_run_to_file(vars(bert.args), test_results)
+    bert.write_run_to_file(vars(bert.args), results)
