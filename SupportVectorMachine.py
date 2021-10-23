@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-'''Support Vector Machine classifier '''
+'''Support Vector Machine classifier'''
 
 # DEBUG
 # fixes cudart64_110.dll error
@@ -27,28 +25,12 @@ class SupportVectorMachine(BaseModel):
     def __init__(self):
         self.arguments = [
             { 
-                "command": "-i",
-                "refer": "--input_file",
-                "default": "reviews.txt",
+                "command": "-ts",
+                "refer": "--test_file",
+                "default": None,
                 "action": None,
                 "type": str,
-                "help": "Input file to learn from (default reviews.txt)"
-            },
-            { 
-                "command": "-t",
-                "refer": "--tfidf",
-                "default": None,
-                "type": None,
-                "action": "store_true",
-                "help": "Use the TF-IDF vectorizer instead of CountVectorizer"
-            },
-            { 
-                "command": "-tp",
-                "refer": "--test_percentage",
-                "default": 0.20,
-                "action": None,
-                "type": float,
-                "help": "Percentage of the data that is used for the test set (default 0.20)"
+                "help": "Test file to run predictions on (e.g. COP24.filt3.sub.json)"
             },
             {
                 "command": "-cv",
@@ -99,18 +81,31 @@ class SupportVectorMachine(BaseModel):
         # load spacy
         self.nlp = spacy.load('en_core_web_sm')
 
-    # TODO remove because built-in functionality of cross_validate
-    def split_data(self, X_full, Y_full, test_percentage):
-        ## This method is responsible for splitting the data into test and training sets, based on the percentage. 
-        ## The two training and two test sets are returned. 
-        split_point = int((1.0 - test_percentage)*len(X_full))
+    def write_run_to_file(self, parameters, results):
+        res_dir = 'results/' + self.name
+        # make sure (sub)directory exists
+        os.makedirs(res_dir, exist_ok=True)
 
-        X_train = X_full[:split_point]
-        Y_train = Y_full[:split_point]
-        X_test = X_full[split_point:]
-        Y_test = Y_full[split_point:]
-        return X_train, Y_train, X_test, Y_test
+        # retrieve version based on number of files in directory
+        path, dirs, files = next(os.walk(res_dir))
+        version = len(files)
 
+        result = {
+            'parameters' : parameters,
+            'results' : results.cv_results_,
+            'best_score': results.best_score_,
+            'best_params': results.best_params_,
+            'param_grid': self.param_grid,
+            }
+
+        for res in results.cv_results_:
+            if res == 'params':
+                continue
+            if hasattr(results.cv_results_[res], "__len__"):
+                result['results'][res] = results.cv_results_[res].tolist()
+
+        # write results to file
+        json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
     def identity(self, x):
         '''Dummy function that just returns the lowercase of the input'''
@@ -118,17 +113,19 @@ class SupportVectorMachine(BaseModel):
 
     def smartJoin(self, x):
         # transform list into string
-        return ''.join([i for i in x if i.isalpha()])
+        return ''.join([i.lower() for i in x if i.isalpha()])
 
     def spacy_pos(self, txt):
         # Part-of-speech transformation
-        return [ token.pos_ for token in self.nlp(txt)]    
+        return [ token.pos_.lower() for token in self.nlp(txt.lower())]    
 
+    # Create the model using gridsearch
     def create_model(self):
-        count = CountVectorizer(preprocessor=self.identity, tokenizer=self.spacy_pos)
+        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
         tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
         union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
 
+        # Initialise parameters
         self.param_grid = {
             'union__tf_idf__max_df': [1.0, 0.75, 0.5],
             'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
@@ -136,17 +133,22 @@ class SupportVectorMachine(BaseModel):
             'cls__C': [0.1, 0.5, 0.05]
         }
 
-        print(Pipeline([("union", union),('cls', LinearSVC())]).get_params().keys())
-
         return GridSearchCV(
             # Combine the union feature with a LinearSVC
             estimator=Pipeline([("union", union),('cls', LinearSVC())]),
             param_grid=self.param_grid,
             cv=self.args.cv,
-            verbose=2
+            verbose=3
         )
+
+    def final_model(self):
+        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
+        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, max_df=1.0, min_df=0.0001, ngram_range=(2,3))
+        union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
+
+        return Pipeline([("union", union),('cls', LinearSVC(C=5))])
         
-        
+    # Performs cross validation using gridsearch via create_model
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
         data = read()
@@ -160,12 +162,8 @@ class SupportVectorMachine(BaseModel):
         model.fit(X_full, Y_full)
         print(f'best score {model.best_score_} with params {model.best_params_}')
         return model 
-
-        # TODO optional GridSearch for value of e.g. C
-        #return cross_validate(model, X_full, Y_full, cv=self.args.cv, verbose=1)
-   
     
-    # TODO remove because cross_validate does this for us
+    # Normal classification for external test sets
     def perform_classification(self):
         # The documents and labels are retrieved. 
         data = read()
@@ -175,28 +173,25 @@ class SupportVectorMachine(BaseModel):
         Y_full = [ article['political_orientation'] for article in articles]
         X_full = [ article['body'] for article in articles]
 
-        # The documents and labels are split into a training and test set. 
-        X_train, Y_train, X_test, Y_test = self.split_data(X_full, Y_full, 0.3)
+        model = self.final_model()
+        model.fit(X_full, Y_full)
 
-        model = self.create_model()
+        # read test data
+        test_articles = read_single(self.args.test_file)
 
-        # DEBUG
-        # t0 = time.time()
+        # extract headlines
+        test_parsed_articles = [ article['headline'] for article in test_articles]
 
-        model = model.fit(X_train, Y_train)
+        pred_articles = model.predict(test_parsed_articles)
+        true_articles = [ article['political_orientation'] for article in test_articles]
 
-        # DEBUG
-        # print("Training time: ", time.time() - t0)
-
-        Y_pred = model.predict(X_test)
-
-        return classification_report(Y_test, Y_pred, digits=3, output_dict=True)
+        print(classification_report(true_articles, pred_articles))
 
 if __name__ == "__main__":
     svm = SupportVectorMachine()
     
-    # DEBUG 
-    # results = svm.perform_classification()
-
-    results = svm.perform_cross_validation()
-    svm.write_run_to_file(vars(svm.args), results)
+    if svm.args.test_file:
+        svm.perform_classification
+    else:
+        results = svm.perform_cross_validation()
+        svm.write_run_to_file(vars(svm.args), results)

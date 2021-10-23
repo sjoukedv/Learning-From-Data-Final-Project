@@ -33,10 +33,6 @@ class BaseModel(ABC):
         return args
 
     @abstractmethod
-    def split_data(self):
-        pass
-
-    @abstractmethod
     def create_model(self):
         pass 
 
