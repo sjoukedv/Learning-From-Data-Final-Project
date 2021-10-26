@@ -66,7 +66,12 @@ def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1,
     # split test into dev/test
     dev, test = train_test_split(articles, train_size=test_percentage, test_size=dev_percentage, shuffle=randomise, random_state=19680801)
 
-    return train, dev, test
+    return [ article['headline'] for article in train ], 
+    [ article['political_orientation'] for article in train ],
+    [ article['headline'] for article in dev ], 
+    [ article['political_orientation'] for article in dev ],
+    [ article['headline'] for article in test ], 
+    [ article['political_orientation'] for article in test ]
 
 if __name__ == "__main__":
     train, dev, test = read_articles()
