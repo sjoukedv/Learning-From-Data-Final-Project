@@ -171,9 +171,9 @@ if __name__ == "__main__":
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
 
     svm.param_grid = {
-            # 'union__tf_idf__max_df': [1.0, 0.75, 0.5],
-            # 'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
-            # 'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
+            'union__tf_idf__max_df': [1.0, 0.75, 0.5],
+            'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
+            'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
             'cls__C': [0.1, 0.5, 0.05]
         }
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
         print('Using best estimator on Test set')
         results = svm.perform_classification(model, X_test, Y_test)
     # run dev
-    else:
+    elif not lstm.args.cop:
         print('Using best estimator on Dev set')
         results = svm.perform_classification(model, X_dev, Y_dev)
 

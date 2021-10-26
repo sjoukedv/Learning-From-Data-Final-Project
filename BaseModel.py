@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import json, argparse, os
 from joblib import dump, load
+from tensorflow import keras
 
 class BaseModel(ABC):
     def __init__(self):
@@ -62,9 +63,9 @@ class BaseModel(ABC):
         return load(f'models/{self.name}.sk.model')
 
     def save_keras_model(self, model):
-        # TODO
-        pass
+        print(f'Storing model to {self.name}.keras.model')
+        model.save(f'models/{self.name}.keras.model')
 
     def load_keras_model(self):
-        # TODO
-        pass
+        print(f'Loading model from {self.name}.keras.model')
+        return keras.models.load_model(f'models/{self.name}.keras.model')
