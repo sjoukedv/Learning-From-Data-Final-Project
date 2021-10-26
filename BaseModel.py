@@ -42,12 +42,7 @@ class BaseModel(ABC):
     def train_model(self):
         pass 
 
-    # Dev set
-    @abstractmethod
-    def perform_validation(self):  
-        pass
-
-    # Test set
+    # Dev or Test set
     @abstractmethod
     def perform_classification(self):  
         pass
