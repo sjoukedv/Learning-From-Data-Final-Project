@@ -32,40 +32,25 @@ class BaseModel(ABC):
         args = parser.parse_args()
         return args
 
+    # Create model that can be fitted to the train data
     @abstractmethod
     def create_model(self):
         pass 
 
+    # Train set
     @abstractmethod
-    def perform_classification(self):
-        pass
-
-    @abstractmethod
-    def perform_cross_validation(self):
+    def train_model(self):
         pass 
 
+    # Dev set
+    @abstractmethod
+    def perform_validation(self):  
+        pass
+
+    # Test set
+    @abstractmethod
+    def perform_classification(self):  
+        pass
+
     def write_run_to_file(self, parameters, results):
-        res_dir = 'results/' + self.name
-        # make sure (sub)directory exists
-        os.makedirs(res_dir, exist_ok=True)
-
-        # retrieve version based on number of files in directory
-        path, dirs, files = next(os.walk(res_dir))
-        version = len(files)
-
-        result = {
-            'parameters' : parameters,
-            'results' : results
-            }
-
-        # convert array to list
-        # TODO comment this for loop when using single classification
-        for res in results:
-            if res == 'params':
-                continue
-            if hasattr(results[res], "__len__"):
-                print(res)
-                result['results'][res] = results[res].tolist()
-
-        # write results to file
-        json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
+        pass
