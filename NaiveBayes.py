@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 
-from dataParser import read, read_single, mergeCopEditions
+from dataParser import read_articles
 from BaseModel import BaseModel 
 
 class NaiveBayes(BaseModel):
@@ -33,13 +33,19 @@ class NaiveBayes(BaseModel):
             "type:": int,
             "help": "Determines the cross-validation splitting strategy"
         },
-            { 
-            "command": "-ts",
-            "refer": "--test_file",
-            "default": None,
-            "action": None,
-            "type": str,
-            "help": "Test file to run predictions on (default COP24.filt3.sub.json)"
+        { 
+            "command": "-test",
+            "refer": "--test",
+            "default": False,
+            "action": "store_true",
+            "help": "Run predictions on test set (otherwise uses dev set)"
+        },
+        { 
+            "command": "-load",
+            "refer": "--load_model",
+            "default": False,
+            "action": "store_true",
+            "help": "Load existing model or perform training"
         },
         ]
 
@@ -47,28 +53,13 @@ class NaiveBayes(BaseModel):
         self.name = "NaiveBayes"
 
     def identity(self, x):
-        '''Dummy function that just returns the lowercase of the input'''
         return x.lower()
 
     def create_model(self):
-        # Convert the texts to vectors
-        # We use a dummy function as tokenizer and preprocessor,
-        # since the texts are already preprocessed and tokenized.
         if self.args.tfidf:
             vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
         else:
-            # Bag of Words vectorizer
             vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity)
-
-        self.param_grid = {
-                'cls__alpha': [1.0, 0.75, 0.5],
-                # 'cls__fit_prior': [True, False],
-                # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
-                'vec__analyzer': ['word', 'char', 'char_wb'],
-                # 'vec__max_df': [1.0, 0.9, 0.8],
-                # 'vec__min_df': [1, 0.9, 0.8],
-                'vec__max_features': [4,8, None],
-            }
 
         # Combine the vectorizer with a Naive Bayes classifier
         # Use GridSearch to find the best combination of parameters
@@ -79,57 +70,37 @@ class NaiveBayes(BaseModel):
             verbose=2
             )
     
-    def final_model(self):
-        # Convert the texts to vectors
-        # We use a dummy function as tokenizer and preprocessor,
-        # since the texts are already preprocessed and tokenized.
-        if self.args.tfidf:
-            vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='word', max_features=None)
-        else:
-            # Bag of Words vectorizer
-            vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='char_wb', max_features=None)
-
-        # Combine the vectorizer with a Naive Bayes classifier
-        # Use GridSearch to find the best combination of parameters
-        return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.5, fit_prior=True))])
-
-    def perform_cross_validation(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        # extract features
-        X_full = [ article['headline'] for article in articles]
-        Y_full = [ article['political_orientation'] for article in articles]
-
-        model = self.create_model()
-        model.fit(X_full, Y_full)
-        print(f'best score {model.best_score_} with params {model.best_params_}')
-
-        return model
+    def train_model(self, model, X_train, Y_train):
+        model = model.fit(X_train, Y_train)
+      
+        self.gs_cv_results = model.cv_results_
+        self.gs_best_params = model.best_params_
+        self.gs_best_score = model.best_score_
+        print(f'best training score {model.best_score_} with params {model.best_params_}')
    
-    def perform_classification(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        # extract features
-        X_full = [ article['headline'] for article in articles]
-        Y_full = [ article['political_orientation'] for article in articles]
-
-        model = self.final_model()
-        model.fit(X_full, Y_full)
-
-        # read test data
-        test_articles = read_single(self.args.test_file)
-        # extract headlines
-        test_parsed_articles = [ article['headline'] for article in test_articles]
-
-        pred_articles = model.predict(test_parsed_articles)
-        true_articles =  [ article['political_orientation'] for article in test_articles]
+        # return best estimator
+        return model.best_estimator_
+        
     
-        print(classification_report(true_articles, pred_articles))
+    # def final_model(self):
+    #     # Convert the texts to vectors
+    #     # We use a dummy function as tokenizer and preprocessor,
+    #     # since the texts are already preprocessed and tokenized.
+    #     if self.args.tfidf:
+    #         vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='word', max_features=None)
+    #     else:
+    #         # Bag of Words vectorizer
+    #         vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='char_wb', max_features=None)
 
+    #     # Combine the vectorizer with a Naive Bayes classifier
+    #     # Use GridSearch to find the best combination of parameters
+    #     return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.5, fit_prior=True))])
+
+    def perform_classification(self, model, X, Y):
+        Y_pred = model.predict(X)
+        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center']))
+        return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
+ 
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
         # make sure (sub)directory exists
@@ -141,17 +112,9 @@ class NaiveBayes(BaseModel):
 
         result = {
             'parameters' : parameters,
-            'results' : results.cv_results_,
-            'best_score': results.best_score_,
-            'best_params': results.best_params_,
             'param_grid': self.param_grid,
+            'classification_report': results
             }
-
-        for res in results.cv_results_:
-            if res == 'params':
-                continue
-            if hasattr(results.cv_results_[res], "__len__"):
-                result['results'][res] = results.cv_results_[res].tolist()
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
@@ -159,10 +122,37 @@ class NaiveBayes(BaseModel):
 if __name__ == "__main__":
     nb = NaiveBayes()
 
+    X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
+
+    if nb.args.load_model:
+        model = nb.load_sk_model()
+    else:
+        # train
+        print('Training model')
+
+        nb.param_grid = {
+            'cls__alpha': [1.0, 0.75, 0.5],
+            # 'cls__fit_prior': [True, False],
+            # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
+            # 'vec__analyzer': ['word', 'char', 'char_wb'],
+            # 'vec__max_df': [1.0, 0.9, 0.8],
+            # 'vec__min_df': [1, 0.9, 0.8],
+            # 'vec__max_features': [4,8, None],
+        }
+
+        model = nb.create_model()
+        model = nb.train_model(model, X_train, Y_train)
+    
+        # save model
+        nb.save_sk_model(model)
+
     # run test
-    if nb.args.test_file:
-        nb.perform_classification()
+    if nb.args.test:
+        print('Using best estimator on Test set')
+        results = nb.perform_classification(model, X_test, Y_test)
     # run dev
     else:
-        results = nb.perform_cross_validation()
-        nb.write_run_to_file(vars(nb.args), results)
+        print('Using best estimator on Dev set')
+        results = nb.perform_classification(model, X_dev, Y_dev)
+
+    nb.write_run_to_file(vars(nb.args), results)

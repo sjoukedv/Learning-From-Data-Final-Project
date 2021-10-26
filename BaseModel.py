@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import json, argparse, os
+from joblib import dump, load
 
 class BaseModel(ABC):
     def __init__(self):
@@ -49,3 +50,13 @@ class BaseModel(ABC):
 
     def write_run_to_file(self, parameters, results):
         pass
+
+    # store model to file {self.name}.model.joblib
+    def save_sk_model(self, model):
+        print(f'Storing model to {self.name}.sk.model')
+        dump(model, f'models/{self.name}.sk.model')
+
+    # load model to file {self.name}.model.joblib
+    def load_sk_model(self):
+        print(f'Loading model from {self.name}.sk.model')
+        return load(f'models/{self.name}.sk.model')
