@@ -2,10 +2,10 @@
 
 # DEBUG
 # fixes cudart64_110.dll error
-import os
-import json
 #os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
 
+import os
+import json
 import sys
 import argparse
 import random
@@ -18,21 +18,13 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.metrics import classification_report, accuracy_score, make_scorer
 from sklearn.model_selection import cross_validate, cross_val_score
 
-from dataParser import read, mergeCopEditions
+from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 from sklearn.model_selection import GridSearchCV
 
 class SupportVectorMachine(BaseModel):
     def __init__(self):
         self.arguments = [
-            { 
-                "command": "-ts",
-                "refer": "--test_file",
-                "default": None,
-                "action": None,
-                "type": str,
-                "help": "Test file to run predictions on (e.g. COP24.filt3.sub.json)"
-            },
             {
                 "command": "-cv",
                 "refer": "--cv",
@@ -73,6 +65,28 @@ class SupportVectorMachine(BaseModel):
                 "type": tuple,
                 "help": "The lower and upper boundary of the range of n-value for different n-grams"
             },
+            { 
+                "command": "-test",
+                "refer": "--test",
+                "default": False,
+                "action": "store_true",
+                "help": "Run predictions on test set (otherwise uses dev set)"
+            },
+            { 
+                "command": "-load",
+                "refer": "--load_model",
+                "default": False,
+                "action": "store_true",
+                "help": "Load existing model or perform training"
+            },
+            {
+                "command": "-cop",
+                "refer": "--cop",
+                "default": None,
+                "action": None,
+                "type:": str,
+                "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
+            },
         ]
 
         super().__init__()
@@ -81,6 +95,49 @@ class SupportVectorMachine(BaseModel):
 
         # load spacy
         self.nlp = spacy.load('en_core_web_sm')
+
+    def identity(self, x):
+        '''Dummy function that just returns the lowercase of the input'''
+        return x.lower()
+
+    def smartJoin(self, x):
+        # transform list into string
+        return ''.join([i.lower() for i in x if i.isalpha()])
+
+    def spacy_pos(self, txt):
+        # Part-of-speech transformation
+        return [ token.pos_.lower() for token in self.nlp(txt.lower())]    
+
+    # Create the model using gridsearch
+    def create_model(self):
+        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
+        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
+        union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
+
+        return GridSearchCV(
+            # Combine the union feature with a LinearSVC
+            estimator=Pipeline([("union", union),('cls', LinearSVC())]),
+            param_grid=self.param_grid,
+            cv=self.args.cv,
+            verbose=3
+        )
+
+    def train_model(self, model, X_train, Y_train):
+        model = model.fit(X_train, Y_train)
+      
+        self.gs_cv_results = model.cv_results_
+        self.gs_best_params = model.best_params_
+        self.gs_best_score = model.best_score_
+        print(f'best training score {model.best_score_} with params {model.best_params_}')
+   
+        # return best estimator
+        return model.best_estimator_
+    
+    # Normal classification for external test sets
+    def perform_classification(self, model, X, Y):
+        Y_pred = model.predict(X)
+        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center']))
+        return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
 
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
@@ -108,91 +165,42 @@ class SupportVectorMachine(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
-    def identity(self, x):
-        '''Dummy function that just returns the lowercase of the input'''
-        return x.lower()
+if __name__ == "__main__":
+    svm = SupportVectorMachine()
 
-    def smartJoin(self, x):
-        # transform list into string
-        return ''.join([i.lower() for i in x if i.isalpha()])
+    X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
 
-    def spacy_pos(self, txt):
-        # Part-of-speech transformation
-        return [ token.pos_.lower() for token in self.nlp(txt.lower())]    
-
-    # Create the model using gridsearch
-    def create_model(self):
-        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
-        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
-        union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
-
-        # Initialise parameters
-        self.param_grid = {
-            'union__tf_idf__max_df': [1.0, 0.75, 0.5],
-            'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
-            'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
+    svm.param_grid = {
+            # 'union__tf_idf__max_df': [1.0, 0.75, 0.5],
+            # 'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
+            # 'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
             'cls__C': [0.1, 0.5, 0.05]
         }
 
-        return GridSearchCV(
-            # Combine the union feature with a LinearSVC
-            estimator=Pipeline([("union", union),('cls', LinearSVC())]),
-            param_grid=self.param_grid,
-            cv=self.args.cv,
-            verbose=3
-        )
-
-    def final_model(self):
-        count = CountVectorizer(preprocessor=self.smartJoin, tokenizer=self.spacy_pos)
-        tf_idf = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, max_df=1.0, min_df=0.0001, ngram_range=(2,3))
-        union = FeatureUnion([("tf_idf", tf_idf),("count", count)])
-
-        return Pipeline([("union", union),('cls', LinearSVC(C=5))])
-        
-    # Performs cross validation using gridsearch via create_model
-    def perform_cross_validation(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        # extract features
-        X_full = [ article['headline'] for article in articles]
-        Y_full = [ article['political_orientation'] for article in articles]
-
-        model = self.create_model()
-        model.fit(X_full, Y_full)
-        print(f'best score {model.best_score_} with params {model.best_params_}')
-        return model 
-    
-    # Normal classification for external test sets
-    def perform_classification(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        # extract features
-        Y_full = [ article['political_orientation'] for article in articles]
-        X_full = [ article['body'] for article in articles]
-
-        model = self.final_model()
-        model.fit(X_full, Y_full)
-
-        # read test data
-        test_articles = read_single(self.args.test_file)
-
-        # extract headlines
-        test_parsed_articles = [ article['headline'] for article in test_articles]
-
-        pred_articles = model.predict(test_parsed_articles)
-        true_articles = [ article['political_orientation'] for article in test_articles]
-
-        print(classification_report(true_articles, pred_articles))
-
-if __name__ == "__main__":
-    svm = SupportVectorMachine()
-    
-    if svm.args.test_file:
-        svm.perform_classification
+    if svm.args.load_model:
+        model = svm.load_sk_model()
     else:
-        results = svm.perform_cross_validation()
-        svm.write_run_to_file(vars(svm.args), results)
+        # train
+        print('Training model')
+        model = svm.create_model()
+        model = svm.train_model(model, X_train, Y_train)
+    
+        # save model
+        svm.save_sk_model(model)
+
+    # run test
+    if svm.args.test and not svm.args.cop:
+        print('Using best estimator on Test set')
+        results = svm.perform_classification(model, X_test, Y_test)
+    # run dev
+    else:
+        print('Using best estimator on Dev set')
+        results = svm.perform_classification(model, X_dev, Y_dev)
+
+    # test model with COP25 edition
+    if svm.args.cop:
+        print(f'Predicting {svm.args.cop}')
+        X_cop, Y_cop = read_single(svm.args.cop)
+        results = svm.perform_classification(model, X_cop, Y_cop)
+        
+    svm.write_run_to_file(vars(svm.args), results)
