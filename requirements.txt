@@ -4,3 +4,4 @@ numpy
 spacy 
 matplotlib
 fasttext 
+imbalanced-learn
