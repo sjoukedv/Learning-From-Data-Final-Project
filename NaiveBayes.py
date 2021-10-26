@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 
-from dataParser import read_articles
+from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
 class NaiveBayes(BaseModel):
@@ -47,6 +47,14 @@ class NaiveBayes(BaseModel):
             "action": "store_true",
             "help": "Load existing model or perform training"
         },
+        {
+            "command": "-cop",
+            "refer": "--cop",
+            "default": None,
+            "action": None,
+            "type:": str,
+            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
+        },
         ]
 
         super().__init__()
@@ -80,21 +88,6 @@ class NaiveBayes(BaseModel):
    
         # return best estimator
         return model.best_estimator_
-        
-    
-    # def final_model(self):
-    #     # Convert the texts to vectors
-    #     # We use a dummy function as tokenizer and preprocessor,
-    #     # since the texts are already preprocessed and tokenized.
-    #     if self.args.tfidf:
-    #         vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='word', max_features=None)
-    #     else:
-    #         # Bag of Words vectorizer
-    #         vec = CountVectorizer(preprocessor=self.identity, tokenizer=self.identity, analyzer='char_wb', max_features=None)
-
-    #     # Combine the vectorizer with a Naive Bayes classifier
-    #     # Use GridSearch to find the best combination of parameters
-    #     return Pipeline([('vec', vec), ('cls', MultinomialNB(alpha=0.5, fit_prior=True))])
 
     def perform_classification(self, model, X, Y):
         Y_pred = model.predict(X)
@@ -124,22 +117,21 @@ if __name__ == "__main__":
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
 
+    nb.param_grid = {
+        'cls__alpha': [1.0, 0.75, 0.5],
+        # 'cls__fit_prior': [True, False],
+        # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
+        # 'vec__analyzer': ['word', 'char', 'char_wb'],
+        # 'vec__max_df': [1.0, 0.9, 0.8],
+        # 'vec__min_df': [1, 0.9, 0.8],
+        # 'vec__max_features': [4,8, None],
+    }
+
     if nb.args.load_model:
         model = nb.load_sk_model()
     else:
         # train
         print('Training model')
-
-        nb.param_grid = {
-            'cls__alpha': [1.0, 0.75, 0.5],
-            # 'cls__fit_prior': [True, False],
-            # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
-            'vec__analyzer': ['word', 'char', 'char_wb'],
-            # 'vec__max_df': [1.0, 0.9, 0.8],
-            # 'vec__min_df': [1, 0.9, 0.8],
-            'vec__max_features': [4,8, None],
-        }
-
         model = nb.create_model()
         model = nb.train_model(model, X_train, Y_train)
     
@@ -147,7 +139,7 @@ if __name__ == "__main__":
         nb.save_sk_model(model)
 
     # run test
-    if nb.args.test:
+    if nb.args.test and not nb.args.cop:
         print('Using best estimator on Test set')
         results = nb.perform_classification(model, X_test, Y_test)
     # run dev
@@ -155,4 +147,10 @@ if __name__ == "__main__":
         print('Using best estimator on Dev set')
         results = nb.perform_classification(model, X_dev, Y_dev)
 
+    # test model with COP25 edition
+    if nb.args.cop:
+        print(f'Predicting {nb.args.cop}')
+        X_cop, Y_cop = read_single(nb.args.cop)
+        results = nb.perform_classification(model, X_cop, Y_cop)
+        
     nb.write_run_to_file(vars(nb.args), results)
