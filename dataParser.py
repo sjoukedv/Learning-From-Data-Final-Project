@@ -1,6 +1,8 @@
 import os, json, random
 import numpy as np
 from pathlib import Path
+import sys
+from sklearn.model_selection import train_test_split
 
 np.random.seed(19680801)
 
@@ -28,7 +30,7 @@ def parsePoliticalOrientation(articles):
         result = np.append(result, newArticle)
     return result
 
-def read():
+def read_data():
     files = Path("data").glob("**/*.json")
 
     data = np.array([])
@@ -48,14 +50,24 @@ def read():
     
     return data    
 
-def read_single(path):
-    with open(path) as json_file:
-        
-        rawJson = json.load(json_file)
-        return parsePoliticalOrientation(rawJson['articles'])
+def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1, randomise=True):
+    if train_percentage + test_percentage + dev_percentage != 1.0:
+        print('Split does not add to 1')
+        sys.exit(-1)
+    raw_data = read_data()
 
-def mergeCopEditions(data):
     articles = []
-    for elem in data:
-        articles = np.append(articles, elem['articles'])
-    return articles
+    for cop_edition in raw_data:
+        articles = np.append(articles, cop_edition['articles'])
+
+    # split train/test
+    train, test = train_test_split(articles, train_size=train_percentage, test_size=1-train_percentage, shuffle=randomise, random_state=19680801)
+
+    # split test into dev/test
+    dev, test = train_test_split(articles, train_size=test_percentage, test_size=dev_percentage, shuffle=randomise, random_state=19680801)
+
+    return train, dev, test
+
+if __name__ == "__main__":
+    train, dev, test = read_articles()
+    print(f'{train.shape}, {dev.shape}, {test.shape}')
