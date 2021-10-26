@@ -60,3 +60,11 @@ class BaseModel(ABC):
     def load_sk_model(self):
         print(f'Loading model from {self.name}.sk.model')
         return load(f'models/{self.name}.sk.model')
+
+    def save_keras_model(self, model):
+        # TODO
+        pass
+
+    def load_keras_model(self):
+        # TODO
+        pass
