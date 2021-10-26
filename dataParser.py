@@ -72,3 +72,13 @@ def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1,
     [ article['political_orientation'] for article in dev ],
     [ article['headline'] for article in test ], 
     [ article['political_orientation'] for article in test ]]
+
+def read_single(path):
+    with open(path) as json_file:
+        
+        rawJson = json.load(json_file)
+        parsed = parsePoliticalOrientation(rawJson['articles'])
+        return [
+            [ article['headline'] for article in parsed ],
+            [ article['political_orientation'] for article in parsed ]
+        ]
