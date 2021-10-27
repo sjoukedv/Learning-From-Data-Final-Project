@@ -169,6 +169,7 @@ if __name__ == "__main__":
     svm = SupportVectorMachine()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
+    X_train, Y_train = svm.under_sample_training_data(X_train, Y_train)
 
     svm.param_grid = {
             'union__tf_idf__max_df': [1.0, 0.75, 0.5],

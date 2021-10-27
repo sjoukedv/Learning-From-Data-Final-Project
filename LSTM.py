@@ -148,6 +148,7 @@ if __name__ == "__main__":
     lstm = LSTM_Embeddings()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
+    X_train, Y_train = lstm.under_sample_training_data(X_train, Y_train)
 
     # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
     fasttext_model = fasttext.load_model('cc.en.300.bin')
