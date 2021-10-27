@@ -30,28 +30,34 @@ from transformers import AutoTokenizer
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.optimizers import Adam
 
-from dataParser import read, mergeCopEditions
+from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
 class Bert(BaseModel):
     def __init__(self):
         self.arguments = [
         { 
-            "command": "-i",
-            "refer": "--input_file",
-            "default": "reviews.txt",
-            "action": None,
-            "type": str,
-            "help": "Input file to learn from (default reviews.txt)"
+            "command": "-test",
+            "refer": "--test",
+            "default": False,
+            "action": "store_true",
+            "help": "Run predictions on test set (otherwise uses dev set)"
         },
         { 
-            "command": "-tp",
-            "refer": "--test_percentage",
-            "default": 0.20,
+            "command": "-load",
+            "refer": "--load_model",
+            "default": False,
+            "action": "store_true",
+            "help": "Load existing model or perform training"
+        },
+        {
+            "command": "-cop",
+            "refer": "--cop",
+            "default": None,
             "action": None,
-            "type": float,
-            "help": "Percentage of the data that is used for the test set (default 0.20)"
-        }
+            "type:": str,
+            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
+        },
         ]
 
         super().__init__()
@@ -116,8 +122,15 @@ class Bert(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
-    def perform_classification(self):
-        pass
+    def perform_classification(self, X, Y):
+        tokens_X = tokenizer(X, padding=True, max_length=200,truncation=True, return_tensors="np").data
+
+        labels_Y = encoder.fit_transform(Y)
+        
+        scores = model.evaluate(tokens_X, labels_Y, verbose=2)
+        print(f'test loss: {scores[0]}, test acc:{scores[1]}')
+
+        return results
 
     def perform_cross_validation(self):
         # The documents and labels are retrieved. 
@@ -159,10 +172,50 @@ class Bert(BaseModel):
 
 if __name__ == "__main__":
     bert = Bert()
-    
-    results = bert.perform_cross_validation()
 
-    # DEBUG
-    #test_results = [{1: [0.307935893535614, 0.9006993174552917]}, {2: [0.1817009150981903, 0.9230769276618958]}]
+    X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
+
+    if bert.args.load_model:
+        model = bert.load_keras_model()
+    else:
+        # train
+        print('Training model')
+
+        encoder = LabelBinarizer()
+
+        lm ="bert-base-cased"
+
+        tokenizer = AutoTokenizer.from_pretrained(lm)
+
+        model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=6)
+
+        results = []
+
+        tokens_train = tokenizer(X_train, padding=True, max_length=200,truncation=True, return_tensors="np").data
+        tokens_test = tokenizer(X_dev, padding=True, max_length=200,truncation=True, return_tensors="np").data
+
+        labels_train = encoder.fit_transform(Y_train)
+        labels_test = encoder.fit_transform(Y_dev)
+
+        model = bert.create_model(model) 
+        model = bert.train_model(model, tokens_train, tokens_test, labels_train, labels_test)
+
+        # save model 
+        bert.save_keras_model(model)
+    
+    # run test
+    if bert.args.test and not bert.args.cop:
+        print('Using best estimator on Test set')
+        results = bert.perform_classification(model, X_test, Y_test)
+    # run dev
+    elif not bert.args.cop:
+        print('Using best estimator on Dev set')
+        results = bert.perform_classification(model, X_dev, Y_dev)
+    
+    # test model with COP25 edition
+    if bert.args.cop:
+        print(f'Predicting {bert.args.cop}')
+        X_cop, Y_cop = read_single(bert.args.cop)
+        results = bert.perform_classification(model, X_cop, Y_cop)
 
     bert.write_run_to_file(vars(bert.args), results)
