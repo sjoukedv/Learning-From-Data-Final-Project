@@ -40,7 +40,7 @@ def mostOccuringWords(headlines):
   
     # most_common() produces k frequently encountered
     # input values and their respective counts.
-    x = [ tag for tag,count in counter.most_common(k)] 
+    x = [ tag[:25] if len(tag) > 25 else tag for tag,count in counter.most_common(k)] 
     y = [ count for tag,count in counter.most_common(k)] 
 
     fig, ax = plt.subplots()
@@ -78,8 +78,6 @@ def barChartNewspaper(articles):
 # debug to run only this file
 if __name__ == "__main__":
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
-
-    # print(np.unique(X_train))
 
     histogramPoliticalOrientation(Y_train + Y_dev + Y_test)
     barChartSet(Y_train, Y_dev, Y_test)
