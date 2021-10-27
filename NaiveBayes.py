@@ -116,6 +116,7 @@ if __name__ == "__main__":
     nb = NaiveBayes()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
+    X_train, Y_train = nb.under_sample_training_data(X_train, Y_train)
 
     nb.param_grid = {
         'cls__alpha': [1.0, 0.75, 0.5],

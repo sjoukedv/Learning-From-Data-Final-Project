@@ -174,6 +174,7 @@ if __name__ == "__main__":
     bert = Bert()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
+    X_train, Y_train = bert.under_sample_training_data(X_train, Y_train)
 
     if bert.args.load_model:
         model = bert.load_keras_model()
