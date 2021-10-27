@@ -16,19 +16,41 @@ from keras.callbacks import EarlyStopping
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelBinarizer
 
-from dataParser import read, read_single, mergeCopEditions
+from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
 class LSTM_Embeddings(BaseModel):
     def __init__(self):
         self.arguments = [
+        {
+            "command": "-cv",
+            "refer": "--cv",
+            "default": 3,
+            "action": None,
+            "type:": int,
+            "help": "Determines the cross-validation splitting strategy"
+        },
         { 
-            "command": "-ts",
-            "refer": "--test_file",
+            "command": "-test",
+            "refer": "--test",
+            "default": False,
+            "action": "store_true",
+            "help": "Run predictions on test set (otherwise uses dev set)"
+        },
+        { 
+            "command": "-load",
+            "refer": "--load_model",
+            "default": False,
+            "action": "store_true",
+            "help": "Load existing model or perform training"
+        },
+        {
+            "command": "-cop",
+            "refer": "--cop",
             "default": None,
             "action": None,
-            "type": str,
-            "help": "Test file to run predictions on (default COP24.filt3.sub.json)"
+            "type:": str,
+            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
         },
         ]
 
@@ -84,32 +106,10 @@ class LSTM_Embeddings(BaseModel):
       # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w')) 
 
-    def perform_classification(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        prepared_data = [ article['headline'] for article in articles]
-        
-        # Transform words to fasttext embeddings
-        # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
-        fasttext_model = fasttext.load_model('cc.en.300.bin')
-        embedded_data = self.vectorizer(prepared_data, fasttext_model)
-        labels = [ article['political_orientation'] for article in articles]
-
-        # Transform string labels to one-hot encodings
-        encoder = LabelBinarizer()
-        labels = encoder.fit_transform([ article['political_orientation'] for article in articles])  # Use encoder.classes_ to find mapping back
-
-        # create and train model
-        model = self.create_model(embedded_data, labels)
-        model = self.train_model(model, embedded_data, labels)
-
-        # read and convert test data
-        test_articles = read_single(self.args.test_file)
-        test_prepared_data = [ article['headline'] for article in test_articles]
+    def perform_classification(self, model, X, Y, fasttext_model, encoder):
+        test_prepared_data = X
         test_embedded_data = self.vectorizer(test_prepared_data, fasttext_model)
-        true_articles = encoder.fit_transform([ article['political_orientation'] for article in test_articles])
+        true_articles = encoder.fit_transform(Y)
   
         scores = model.evaluate(test_embedded_data, true_articles, verbose=1, batch_size = 32)
         print(f'test loss: {scores[0]}, test acc:{scores[1]}')
@@ -147,10 +147,45 @@ class LSTM_Embeddings(BaseModel):
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
 
-    # run test
-    if lstm.args.test_file:
-        lstm.perform_classification()
-    # run dev
+    X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
+
+    # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
+    fasttext_model = fasttext.load_model('cc.en.300.bin')
+
+    encoder = LabelBinarizer()
+
+    if lstm.args.load_model:
+        model = lstm.load_keras_model()
     else:
-        results = lstm.perform_cross_validation()
-        lstm.write_run_to_file(vars(lstm.args), results)
+        # train
+        print('Training model')
+
+        # Transform words to fasttext embeddings
+        embedded_data = lstm.vectorizer(X_train, fasttext_model)
+
+        # Transform string labels to one-hot encodings
+        labels = encoder.fit_transform(Y_train)  # Use encoder.classes_ to find mapping back
+
+        # create and train model
+        model = lstm.create_model(embedded_data, labels)
+        model = lstm.train_model(model, embedded_data, labels)
+
+        # save model 
+        lstm.save_keras_model(model)
+    
+    # run test
+    if lstm.args.test and not lstm.args.cop:
+        print('Using best estimator on Test set')
+        results = lstm.perform_classification(model, X_test, Y_test, fasttext_model, encoder)
+    # run dev
+    elif not lstm.args.cop:
+        print('Using best estimator on Dev set')
+        results = lstm.perform_classification(model, X_dev, Y_dev, fasttext_model, encoder)
+    
+    # test model with COP25 edition
+    if lstm.args.cop:
+        print(f'Predicting {lstm.args.cop}')
+        X_cop, Y_cop = read_single(lstm.args.cop)
+        results = lstm.perform_classification(model, X_cop, Y_cop, fasttext_model, encoder)
+
+    lstm.write_run_to_file(vars(lstm.args), results)
