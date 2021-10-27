@@ -78,7 +78,6 @@ def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1,
             continue
         articles = np.append(articles,article)
 
-    # TODO fix imbalance in data
 
     # split train/test
     train, test = train_test_split(articles, train_size=train_percentage, test_size=1-train_percentage, shuffle=randomise, random_state=19680801)
