@@ -2,8 +2,11 @@
 
 '''LSTM fasttext classifier '''
 
-import fasttext
 import os
+# DEBUG
+# fixes cudart64_110.dll error
+os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+import fasttext
 import json
 import numpy as np
 import tensorflow as tf
@@ -148,7 +151,9 @@ if __name__ == "__main__":
     lstm = LSTM_Embeddings()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
-    X_train, Y_train = lstm.under_sample_training_data(X_train, Y_train)
+
+    if lstm.args.undersample:
+        X_train, Y_train = lstm.under_sample_training_data(X_train, Y_train)
 
     # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
     fasttext_model = fasttext.load_model('cc.en.300.bin')
