@@ -63,8 +63,18 @@ class BaseModel(ABC):
         return load(f'models/{self.name}.sk.model')
 
     def save_keras_model(self, model):
-        print(f'Storing model to {self.name}.keras.model')
-        model.save(f'models/{self.name}.keras.model')
+        res_dir = 'models/' + self.name
+        # make sure (sub)directory exists
+        os.makedirs(res_dir, exist_ok=True)
+
+        # retrieve version based on number of files in directory
+        path, dirs, files = next(os.walk(res_dir))
+        version = len(files)
+
+        store_location = f'models/{self.name}/{self.name}.{str(version).zfill(2)}.keras.model'
+
+        print(f'Storing model to {store_location}')
+        model.save(store_location)
 
     def load_keras_model(self):
         print(f'Loading model from {self.name}.keras.model')
