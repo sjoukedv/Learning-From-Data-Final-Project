@@ -144,7 +144,7 @@ if __name__ == "__main__":
         print('Using best estimator on Test set')
         results = nb.perform_classification(model, X_test, Y_test)
     # run dev
-    elif not lstm.args.cop:
+    elif not nb.args.cop:
         print('Using best estimator on Dev set')
         results = nb.perform_classification(model, X_dev, Y_dev)
 
