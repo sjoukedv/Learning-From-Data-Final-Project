@@ -21,6 +21,18 @@ class BaseModel(ABC):
             },
         )
 
+        # Add argument for model number to load
+        self.arguments.append(
+            {
+            "command": "-model_number",
+            "refer": "--model_number",
+            "default": '00',
+            "action": None,
+            "type:": str,
+            "help": "Name of model which should be loaded"
+            },
+        )
+
         self.args = self.create_arg_parser()
 
     def create_arg_parser(self):
@@ -94,13 +106,23 @@ class BaseModel(ABC):
 
     # store model to file {self.name}.model.joblib
     def save_sk_model(self, model):
-        print(f'Storing model to {self.name}.sk.model')
-        dump(model, f'models/{self.name}.sk.model')
+        res_dir = 'models/' + self.name
+        # make sure (sub)directory exists
+        os.makedirs(res_dir, exist_ok=True)
+
+        # retrieve version based on number of files in directory
+        path, dirs, files = next(os.walk(res_dir))
+        version = len(files)
+
+        store_location = f'models/{self.name}/{self.name}.{str(version).zfill(2)}.sk.model'
+
+        print(f'Storing model to {store_location}')
+        dump(model, store_location)
 
     # load model to file {self.name}.model.joblib
     def load_sk_model(self):
-        print(f'Loading model from {self.name}.sk.model')
-        return load(f'models/{self.name}.sk.model')
+        print(f'models/{self.name}/{self.name}.{self.args.model_number}.sk.model')
+        return load(f'models/{self.name}/{self.name}.{self.args.model_number}.sk.model')
 
     def save_keras_model(self, model):
         res_dir = 'models/' + self.name
@@ -117,5 +139,5 @@ class BaseModel(ABC):
         model.save(store_location)
 
     def load_keras_model(self):
-        print(f'Loading model from {self.name}.keras.model')
-        return keras.models.load_model(f'models/{self.name}.keras.model')
+        print(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
+        return keras.models.load_model(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
