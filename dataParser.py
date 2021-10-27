@@ -3,6 +3,7 @@ import numpy as np
 from pathlib import Path
 import sys
 from sklearn.model_selection import train_test_split
+from imblearn.under_sampling import RandomUnderSampler
 
 np.random.seed(19680801)
 
@@ -56,9 +57,36 @@ def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1,
         sys.exit(-1)
     raw_data = read_data()
 
-    articles = []
+    raw_articles = []
     for cop_edition in raw_data:
-        articles = np.append(articles, cop_edition['articles'])
+        raw_articles = np.append(raw_articles, cop_edition['articles'])
+
+    # remove articles with 'bad' headlines
+    cnt = 0
+    articles = []
+    for article in raw_articles:
+        if "no headline in original" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+        if "letters" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+        if "letters to the editor" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+        if "news summary" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+        if "letters & emails" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+        if "digest" == article['headline'].lower():
+            cnt = cnt + 1
+            continue
+
+        articles = np.append(articles,article)
+
+    # TODO fix imbalance in data
 
     # split train/test
     train, test = train_test_split(articles, train_size=train_percentage, test_size=1-train_percentage, shuffle=randomise, random_state=19680801)
