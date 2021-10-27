@@ -62,28 +62,20 @@ def read_articles(train_percentage=0.8, test_percentage=0.1, dev_percentage=0.1,
         raw_articles = np.append(raw_articles, cop_edition['articles'])
 
     # remove articles with 'bad' headlines
-    cnt = 0
     articles = []
     for article in raw_articles:
         if "no headline in original" == article['headline'].lower():
-            cnt = cnt + 1
             continue
         if "letters" == article['headline'].lower():
-            cnt = cnt + 1
             continue
         if "letters to the editor" == article['headline'].lower():
-            cnt = cnt + 1
             continue
         if "news summary" == article['headline'].lower():
-            cnt = cnt + 1
             continue
         if "letters & emails" == article['headline'].lower():
-            cnt = cnt + 1
             continue
         if "digest" == article['headline'].lower():
-            cnt = cnt + 1
             continue
-
         articles = np.append(articles,article)
 
     # TODO fix imbalance in data
