@@ -58,6 +58,30 @@ class Bert(BaseModel):
             "type:": str,
             "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
         },
+        {
+            "command": "-batch_size",
+            "refer": "--batch_size",
+            "default": 16,
+            "action": None,
+            "type": int,
+            "help": "Batch size"
+        },
+        {
+            "command": "-epochs",
+            "refer": "--epochs",
+            "default": 50,
+            "action": None,
+            "type": int,
+            "help": "Epochs"
+        },
+        {
+            "command": "-max_length",
+            "refer": "--max_length",
+            "default": 200,
+            "action": None,
+            "type": int,
+            "help": "Max length"
+        },
         ]
 
         super().__init__()
@@ -90,8 +114,6 @@ class Bert(BaseModel):
     def train_model(self, model, tokens_train, tokens_test, Y_train_bin, Y_test_bin):
         '''Train the model here. Note the different settings you can experiment with!'''
         verbose = 2
-        epochs = 50 #default 10
-        batch_size = 16 #default 32
 
         validation_data = (tokens_test, Y_test_bin)
 
@@ -99,7 +121,7 @@ class Bert(BaseModel):
         callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
 
         # Finally fit the model to our data
-        model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=epochs, batch_size=batch_size, validation_data=(tokens_test, Y_test_bin))
+        model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=self.args.epochs, batch_size=self.args.batch_size, validation_data=(tokens_test, Y_test_bin))
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -122,8 +144,8 @@ class Bert(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
-    def perform_classification(self, X, Y):
-        tokens_X = tokenizer(X, padding=True, max_length=200,truncation=True, return_tensors="np").data
+    def perform_classification(self, model, X, Y):
+        tokens_X = tokenizer(X, padding=True, max_length=self.args.max_length,truncation=True, return_tensors="np").data
 
         labels_Y = encoder.fit_transform(Y)
         
@@ -133,42 +155,7 @@ class Bert(BaseModel):
         return results
 
     def perform_cross_validation(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
-
-        prepared_data = np.array([article['headline'] for article in articles])
-
-        # Transform string labels to one-hot encodings
-        encoder = LabelBinarizer()
-        labels = encoder.fit_transform([ article['political_orientation'] for article in articles])  # Use encoder.classes_ to find mapping back
-
-        lm ="bert-base-cased"
-
-        tokenizer = AutoTokenizer.from_pretrained(lm)
-
-        model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=6)
-
-        # Perform KFold Cross Validation
-        kfold = KFold(n_splits=2, shuffle=True)
-        results = []
-        n_fold = 1
-
-        for train_index, test_index in kfold.split(prepared_data, labels):
-            tokens_train = tokenizer(prepared_data[train_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
-            tokens_test = tokenizer(prepared_data[test_index].tolist(), padding=True, max_length=200,truncation=True, return_tensors="np").data
-
-            Y_train_bin = encoder.fit_transform(labels[train_index])
-            Y_test_bin = encoder.fit_transform(labels[test_index])
-
-            model = self.create_model(model) 
-            model = self.train_model(model, tokens_train, tokens_test, Y_train_bin, Y_test_bin)
-           
-            scores = model.evaluate(tokens_test, Y_test_bin, verbose=2)
-            results.append({n_fold: scores})
-            n_fold += 1
-
-        return results
+        pass
 
 if __name__ == "__main__":
     bert = Bert()
@@ -189,8 +176,6 @@ if __name__ == "__main__":
         tokenizer = AutoTokenizer.from_pretrained(lm)
 
         model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=6)
-
-        results = []
 
         tokens_train = tokenizer(X_train, padding=True, max_length=200,truncation=True, return_tensors="np").data
         tokens_test = tokenizer(X_dev, padding=True, max_length=200,truncation=True, return_tensors="np").data
