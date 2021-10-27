@@ -40,7 +40,7 @@ def mostOccuringWords(headlines):
   
     # most_common() produces k frequently encountered
     # input values and their respective counts.
-    x = [ tag[:25] if len(tag) > 25 else tag for tag,count in counter.most_common(k)] 
+    x = [ tag for tag,count in counter.most_common(k)] 
     y = [ count for tag,count in counter.most_common(k)] 
 
     fig, ax = plt.subplots()
@@ -50,6 +50,16 @@ def mostOccuringWords(headlines):
     ax.set_ylabel('Number of occurences')
     ax.set_title('Word occurence')
     fig.savefig('figures/most_occuring_words', bbox_inches="tight")
+
+def wordFrequency(headlines):
+    cnts = [ len(headline.split()) for headline in headlines] 
+    fig, ax = plt.subplots()
+    ax.set_xlabel('Words')   
+    ax.set_ylabel('Articles')
+    ax.set_title('Number of words in a headline')
+    plt.hist(cnts, bins=range(min(cnts), max(cnts) + 1, 1))
+    plt.yscale('log')
+    fig.savefig('figures/hist_word_count.png')
 
 def barChartNewspaper(articles):
     # 'Mail & Guardian' 'Sydney Morning Herald (Australia)'
@@ -82,4 +92,4 @@ if __name__ == "__main__":
     histogramPoliticalOrientation(Y_train + Y_dev + Y_test)
     barChartSet(Y_train, Y_dev, Y_test)
     mostOccuringWords(X_train + X_dev + X_test)
-    # barChartNewspaper(zip(X_train + X_dev + X_test, Y_train + Y_dev + Y_test))
+    wordFrequency(X_train + X_dev + X_test)
