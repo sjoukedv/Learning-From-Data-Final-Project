@@ -5,3 +5,4 @@ spacy
 matplotlib
 fasttext 
 imbalanced-learn
+transformers
