@@ -15,12 +15,12 @@ class BaseModel(ABC):
                 "command": "-undersample",
                 "refer": "--undersample",
                 "default": None,
-                "action": None,
-                "type:": float,
+                "type": None,
+                "action": "store_true",
                 "help": "Value which indicates whether to downsample the data"
             },
         )
-
+        
         # Add argument for model number to load
         self.arguments.append(
             {
@@ -63,28 +63,11 @@ class BaseModel(ABC):
 
     # Method used to under sample training data
     def under_sample_training_data(self, X_train, Y_train):
-        if self.args.undersample == None or self.args.undersample == 0:
-            return X_train, Y_train 
-        
-        print('Under sampling will now be performed.')
-
         # define undersample strategy
-        undersample = RandomUnderSampler(sampling_strategy=float(self.args.undersample))
-
-        # Print size before 
-        print('x-train size: ' + str(len(X_train)))
-        print('y-train size: ' + str(len(Y_train)))
-
+        undersample = RandomUnderSampler(sampling_strategy='majority')
         # apply undersampling
         X_train, Y_train = undersample.fit_resample(np.array(X_train).reshape(-1, 1), np.array(Y_train).reshape(-1, 1))
-
-        X_train = X_train.flatten().tolist()
-        Y_train = Y_train.flatten().tolist()
-
-        print('x-train size: ' + str(len(X_train)))
-        print('y-train size: ' + str(len(Y_train)))
-
-        return X_train, Y_train
+        return X_train.flatten().tolist(), Y_train.flatten().tolist()
 
     # Create model that can be fitted to the train data
     @abstractmethod
