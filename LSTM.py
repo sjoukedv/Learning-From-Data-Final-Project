@@ -18,6 +18,7 @@ from keras.callbacks import EarlyStopping
 
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelBinarizer
+from sklearn.metrics import classification_report
 
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
@@ -67,12 +68,26 @@ class LSTM_Embeddings(BaseModel):
     def create_model(self, X_train, Y_train): 
         model = Sequential()
 
-        # add layers
-        model.add(Embedding(300, 300, trainable=False))
-        model.add(LSTM(units=128, dropout=0.2))
-        model.add(Dense(1, activation='sigmoid'))
-
-        model.compile(loss='binary_crossentropy', optimizer=SGD(learning_rate=0.1), metrics=['accuracy'])
+        learning_rate = 0.01
+        loss_function = 'categorical_crossentropy'
+        optim = SGD(learning_rate=learning_rate)
+        # Take embedding dim and size from emb_matrix
+        embedding_dim = len(X_train[0])
+        num_tokens = len(X_train)
+        num_labels = len(Y_train[0])
+        # Now build the model
+        model = Sequential()
+        model.add(Embedding(num_tokens, embedding_dim,trainable=False))
+        # Here you should add LSTM layers (and potentially dropout)
+        model.add(LSTM(units = 15))
+        
+        #raise NotImplementedError("Add LSTM layer(s) here")
+        # Ultimately, end with dense layer with softmax
+        # model.add(Dense(input_dim=embedding_dim, units=, activation="softmax"))
+        model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
+        # Compile model using our settings, check for accuracy
+        model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
+ 
         return model
 
     def train_model(self, model, X_train, Y_train):
@@ -80,16 +95,21 @@ class LSTM_Embeddings(BaseModel):
         # Potentially change these to cmd line args again
         # And yes, don't be afraid to experiment!
         verbose = 1
-        epochs = 5 #default 10
-        batch_size = 32 #default 32
+        epochs = 10 #default 10
+
+        batch_size = 16 #default 32
+        
+        
         # 10 percent of the training data we use to keep track of our training process
         # Use it to prevent overfitting!
-        validation_split = 0.1
+        # validation_split = 0.1
+        # , validation_split=validation_split
 
-        early_acc = EarlyStopping(monitor='accuracy', patience=1)
+        # early_acc = EarlyStopping(monitor='accuracy', patience=1)
+        # , callbacks=[early_acc]
 
         # Finally fit the model to our data
-        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, batch_size=batch_size, callbacks=[early_acc], validation_split=validation_split)
+        model.fit(X_train, Y_train, verbose=verbose, batch_size=batch_size, epochs=epochs)
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -106,46 +126,29 @@ class LSTM_Embeddings(BaseModel):
             'results' : results
             }
 
-      # write results to file
+        # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w')) 
 
     def perform_classification(self, model, X, Y, fasttext_model, encoder):
-        test_prepared_data = X
-        test_embedded_data = self.vectorizer(test_prepared_data, fasttext_model)
+        test_embedded_data = self.vectorizer(X, fasttext_model)
+        # encode gold labels
         true_articles = encoder.fit_transform(Y)
-  
-        scores = model.evaluate(test_embedded_data, true_articles, verbose=1, batch_size = 32)
-        print(f'test loss: {scores[0]}, test acc:{scores[1]}')
 
-    def perform_cross_validation(self):
-        # The documents and labels are retrieved. 
-        data = read()
-        articles = mergeCopEditions(data)
+        true_articles = np.argmax(true_articles, axis=1)
+        # predict embedded data
 
-        prepared_data = [ article['headline'] for article in articles]
+        # print(f'Dif array {embedded_data[0] - embedded_data[1]}')
+     
 
-        # Transform words to fasttext embeddings
-        # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
-        fasttext_model = fasttext.load_model('cc.en.300.bin')
-        embedded_data = self.vectorizer(prepared_data, fasttext_model)
+        y_pred = model.predict(test_embedded_data, verbose=1)
 
-        # Transform string labels to one-hot encodings
-        encoder = LabelBinarizer()
-        labels = encoder.fit_transform([ article['political_orientation'] for article in articles])  # Use encoder.classes_ to find mapping back
+        Y_pred = np.argmax(Y_pred, axis=1)
+        # convert to nearest integer
+        # y_pred = np.rint(y_pred, casting='unsafe').astype(int, casting='unsafe')
 
-        # Perform KFold Cross Validation
-        kfold = KFold(n_splits=3, shuffle=True)
-        results = []
-        n_fold = 1
-        for train, test in kfold.split(embedded_data, labels):
-            model = self.create_model(embedded_data[train], labels[train])
-            model = self.train_model(model, embedded_data[train], labels[train])
-           
-            scores = model.evaluate(embedded_data[test], labels[test], verbose=0)
-            results.append({n_fold: scores})
-            n_fold += 1
-
-        return results
+        print(f'pred labels {type(y_pred)}{y_pred[:50].tolist()}')
+        print(f'true labels {type(true_articles)}{true_articles[:50].tolist()}')
+        print(classification_report(y_pred, true_articles, labels=encoder.classes_))
 
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
@@ -159,6 +162,8 @@ if __name__ == "__main__":
     fasttext_model = fasttext.load_model('cc.en.300.bin')
 
     encoder = LabelBinarizer()
+    # Transform string labels to one-hot encodings
+    labels = encoder.fit_transform(Y_train)  # Use encoder.classes_ to find mapping back
 
     if lstm.args.load_model:
         model = lstm.load_keras_model()
@@ -169,13 +174,12 @@ if __name__ == "__main__":
         # Transform words to fasttext embeddings
         embedded_data = lstm.vectorizer(X_train, fasttext_model)
 
-        # Transform string labels to one-hot encodings
-        labels = encoder.fit_transform(Y_train)  # Use encoder.classes_ to find mapping back
-
         # create and train model
         model = lstm.create_model(embedded_data, labels)
+      
         model = lstm.train_model(model, embedded_data, labels)
-
+        model.summary()
+      
         # save model 
         lstm.save_keras_model(model)
     
