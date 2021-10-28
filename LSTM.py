@@ -134,7 +134,7 @@ class LSTM_Embeddings(BaseModel):
         # encode gold labels
         true_articles = encoder.fit_transform(Y)
 
-        true_articles = np.argmax(true_articles, axis=1)
+        # true_articles = np.argmax(true_articles, axis=1)
         # predict embedded data
 
         # print(f'Dif array {embedded_data[0] - embedded_data[1]}')
@@ -142,7 +142,7 @@ class LSTM_Embeddings(BaseModel):
 
         y_pred = model.predict(test_embedded_data, verbose=1)
 
-        Y_pred = np.argmax(Y_pred, axis=1)
+        # Y_pred = np.argmax(Y_pred, axis=1)
         # convert to nearest integer
         # y_pred = np.rint(y_pred, casting='unsafe').astype(int, casting='unsafe')
 
