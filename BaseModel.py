@@ -123,4 +123,10 @@ class BaseModel(ABC):
 
     def load_keras_model(self):
         print(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
-        return keras.models.load_model(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
+        
+        model = keras.models.load_model(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
+        
+        #if self.name == 'Bert':
+            #model.load_weights(f'models/{self.name}/{self.name}.{self.args.model_number}.h5')
+        
+        return model
