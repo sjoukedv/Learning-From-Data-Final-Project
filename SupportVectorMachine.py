@@ -36,7 +36,7 @@ class SupportVectorMachine(BaseModel):
             {
                 "command": "-C",
                 "refer": "--C",
-                "default": 0.1,
+                "default": 0.5,
                 "action": None,
                 "type": float,
                 "help": "Regularization parameter"
@@ -136,8 +136,8 @@ class SupportVectorMachine(BaseModel):
     # Normal classification for external test sets
     def perform_classification(self, model, X, Y):
         Y_pred = model.predict(X)
-        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center']))
-        return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
+        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center'], digits=3))
+        return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'], digits=3)
 
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
@@ -150,17 +150,9 @@ class SupportVectorMachine(BaseModel):
 
         result = {
             'parameters' : parameters,
-            'results' : results.cv_results_,
-            'best_score': results.best_score_,
-            'best_params': results.best_params_,
             'param_grid': self.param_grid,
-            }
-
-        for res in results.cv_results_:
-            if res == 'params':
-                continue
-            if hasattr(results.cv_results_[res], "__len__"):
-                result['results'][res] = results.cv_results_[res].tolist()
+            'classification_report': results
+        }
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
@@ -169,7 +161,9 @@ if __name__ == "__main__":
     svm = SupportVectorMachine()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles() 
-    X_train, Y_train = svm.under_sample_training_data(X_train, Y_train)
+
+    if svm.args.undersample:
+        X_train, Y_train = svm.under_sample_training_data(X_train, Y_train)
 
     svm.param_grid = {
             'union__tf_idf__max_df': [1.0, 0.75, 0.5],
@@ -194,7 +188,7 @@ if __name__ == "__main__":
         print('Using best estimator on Test set')
         results = svm.perform_classification(model, X_test, Y_test)
     # run dev
-    elif not lstm.args.cop:
+    elif not svm.args.cop:
         print('Using best estimator on Dev set')
         results = svm.perform_classification(model, X_dev, Y_dev)
 

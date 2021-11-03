@@ -144,7 +144,7 @@ class Bert(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
-    def perform_classification(self, model, X, Y):
+    def perform_classification(self, model, X, Y, tokenizer, encoder):
         tokens_X = tokenizer(X, padding=True, max_length=self.args.max_length,truncation=True, return_tensors="np").data
 
         labels_Y = encoder.fit_transform(Y)
@@ -161,19 +161,21 @@ if __name__ == "__main__":
     bert = Bert()
 
     X_train, Y_train, X_dev, Y_dev, X_test, Y_test = read_articles()
-    X_train, Y_train = bert.under_sample_training_data(X_train, Y_train)
+    
+    if bert.args.undersample:
+        X_train, Y_train = bert.under_sample_training_data(X_train, Y_train)
+
+    encoder = LabelBinarizer()
+
+    lm ="bert-base-cased"
+
+    tokenizer = AutoTokenizer.from_pretrained(lm)
 
     if bert.args.load_model:
         model = bert.load_keras_model()
     else:
         # train
         print('Training model')
-
-        encoder = LabelBinarizer()
-
-        lm ="bert-base-cased"
-
-        tokenizer = AutoTokenizer.from_pretrained(lm)
 
         model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=6)
 
@@ -192,16 +194,16 @@ if __name__ == "__main__":
     # run test
     if bert.args.test and not bert.args.cop:
         print('Using best estimator on Test set')
-        results = bert.perform_classification(model, X_test, Y_test)
+        results = bert.perform_classification(model, X_test, Y_test, tokenizer, encoder)
     # run dev
     elif not bert.args.cop:
         print('Using best estimator on Dev set')
-        results = bert.perform_classification(model, X_dev, Y_dev)
+        results = bert.perform_classification(model, X_dev, Y_dev, tokenizer, encoder)
     
     # test model with COP25 edition
     if bert.args.cop:
         print(f'Predicting {bert.args.cop}')
         X_cop, Y_cop = read_single(bert.args.cop)
-        results = bert.perform_classification(model, X_cop, Y_cop)
+        results = bert.perform_classification(model, X_cop, Y_cop, tokenizer, encoder)
 
     bert.write_run_to_file(vars(bert.args), results)

@@ -110,7 +110,7 @@ class NaiveBayes(BaseModel):
             'parameters' : parameters,
             'param_grid': self.param_grid,
             'classification_report': results
-            }
+        }
 
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
