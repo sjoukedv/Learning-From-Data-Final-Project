@@ -27,7 +27,7 @@ from sklearn.preprocessing import LabelBinarizer
 
 from transformers import TFAutoModelForSequenceClassification
 from transformers import AutoTokenizer
-from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 
 from dataParser import read_articles, read_single
@@ -93,7 +93,7 @@ class Bert(BaseModel):
 
     # Create the model 
     def create_model(self, model): 
-        loss_function = SparseCategoricalCrossentropy(from_logits=True)
+        loss_function = BinaryCrossentropy()
 
         starter_learning_rate = 5e-5
         end_learning_rate = 5e-6
@@ -148,6 +148,11 @@ class Bert(BaseModel):
         tokens_X = tokenizer(X, padding=True, max_length=self.args.max_length,truncation=True, return_tensors="np").data
 
         labels_Y = encoder.fit_transform(Y)
+
+        Y_test_predict = model.predict(tokens_X, verbose=2)
+        print(Y_test_predict)
+        print(labels_Y)
+        print(classification_report(Y_test_predict, labels_Y, labels=encoder.classes_))
         
         scores = model.evaluate(tokens_X, labels_Y, verbose=2)
         print(f'test loss: {scores[0]}, test acc:{scores[1]}')
