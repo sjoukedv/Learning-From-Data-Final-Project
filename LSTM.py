@@ -6,18 +6,19 @@ import os
 # DEBUG
 # fixes cudart64_110.dll error
 os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
-import fasttext
 import json
 import numpy as np
 import tensorflow as tf
+import sys
 
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Embedding
+from keras.layers import LSTM, Dense, Embedding, TextVectorization
 from tensorflow.keras.optimizers import SGD
 from keras.callbacks import EarlyStopping
+from keras.initializers import Constant
 
 from sklearn.model_selection import KFold
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 from sklearn.metrics import classification_report
 
 from dataParser import read_articles, read_single
@@ -64,52 +65,67 @@ class LSTM_Embeddings(BaseModel):
     def vectorizer(self, samples, model):
         '''Turn sentence into embeddings, i.e. replace words by the fasttext word vector '''
         return np.array([ model.get_sentence_vector(sample) for sample in samples])
+    
+    def read_embeddings(self, embeddings_file):
+        word_embeddings = {}
+        f = open(embeddings_file + '.txt', 'r', encoding="utf8") 
+        for line in f:
+            values = line.split()
+            word = values[0]
+            coefs = np.asarray(values[1:],  dtype='float32')
+            word_embeddings[word] = coefs
 
-    def create_model(self, X_train, Y_train): 
-        model = Sequential()
+        f.close()
+        return word_embeddings
 
+    def get_emb_matrix(self,voc, emb):
+        '''Get embedding matrix given vocab and the embeddings'''
+        num_tokens = len(voc) + 2
+        word_index = dict(zip(voc, range(len(voc))))
+        # Bit hacky, get embedding dimension from the word "the"
+        embedding_dim = len(emb["the"])
+        # Prepare embedding matrix to the correct size
+        embedding_matrix = np.zeros((num_tokens, embedding_dim))
+        for word, i in word_index.items():
+            embedding_vector = emb.get(word)
+            if embedding_vector is not None:
+                # Words not found in embedding index will be all-zeros.
+                embedding_matrix[i] = embedding_vector
+        # Final matrix with pretrained embeddings that we can feed to embedding layer
+        return embedding_matrix
+
+    def create_model(self, Y_train, emb_matrix): 
         learning_rate = 0.01
-        loss_function = 'categorical_crossentropy'
-        optim = SGD(learning_rate=learning_rate)
-        # Take embedding dim and size from emb_matrix
-        embedding_dim = len(X_train[0])
-        num_tokens = len(X_train)
+        loss_function = 'binary_crossentropy'
+        # optim = SGD(learning_rate=learning_rate)
+        optim = "adam"
+
+        embedding_dim = len(emb_matrix[0])
+        num_tokens = len(emb_matrix)
         num_labels = len(Y_train[0])
-        # Now build the model
+        # num_labels = 1
+        print(f'emd_dim {embedding_dim}, num_tok {num_tokens}, num_lab {num_labels}')
+
         model = Sequential()
-        model.add(Embedding(num_tokens, embedding_dim,trainable=False))
-        # Here you should add LSTM layers (and potentially dropout)
-        model.add(LSTM(units = 15))
-        
-        #raise NotImplementedError("Add LSTM layer(s) here")
-        # Ultimately, end with dense layer with softmax
-        # model.add(Dense(input_dim=embedding_dim, units=, activation="softmax"))
-        model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
-        # Compile model using our settings, check for accuracy
+        model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix),trainable=False))
+        model.add(LSTM(3))
+        model.add(Dense(input_dim=embedding_dim, units=num_labels, activation="sigmoid"))
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
- 
         return model
 
-    def train_model(self, model, X_train, Y_train):
+    def train_model(self, model, X_train, Y_train, X_dev, Y_dev):
         '''Train the model here. Note the different settings you can experiment with!'''
         # Potentially change these to cmd line args again
         # And yes, don't be afraid to experiment!
         verbose = 1
         epochs = 10 #default 10
+        batch_size = 32 #default 32
 
-        batch_size = 16 #default 32
-        
-        
-        # 10 percent of the training data we use to keep track of our training process
-        # Use it to prevent overfitting!
-        # validation_split = 0.1
-        # , validation_split=validation_split
+        callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
 
-        # early_acc = EarlyStopping(monitor='accuracy', patience=1)
-        # , callbacks=[early_acc]
-
-        # Finally fit the model to our data
-        model.fit(X_train, Y_train, verbose=verbose, batch_size=batch_size, epochs=epochs)
+        # Fit the model to our data
+        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, callbacks=[callback], batch_size=batch_size, validation_data=(X_dev, Y_dev))
+        self.test_set_predict(model, X_dev, Y_dev, "dev")
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -150,6 +166,24 @@ class LSTM_Embeddings(BaseModel):
         print(f'true labels {type(true_articles)}{true_articles[:50].tolist()}')
         print(classification_report(y_pred, true_articles, labels=encoder.classes_))
 
+    def test_set_predict(self, model, X_test, Y_test, ident):
+        '''Do predictions and measure accuracy on our own test set (that we split off train)'''
+        # Get predictions using the trained model
+        Y_pred = model.predict(X_test)
+
+        print(f'Predictions {Y_pred[:5]}')
+        
+        # Finally, convert to numerical labels to get scores with sklearn
+        # Y_pred = np.argmax(Y_pred, axis=1)
+
+        # print(f'Predictions {Y_pred[:5]}')
+        # If you have gold data, you can calculate accuracy
+        print(f'Gold labels {Y_test[:5]}')
+        Y_test = np.argmax(Y_test, axis=1)
+        print(ident)
+        print(classification_report(Y_test, Y_pred))
+
+
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
 
@@ -158,12 +192,11 @@ if __name__ == "__main__":
     if lstm.args.undersample:
         X_train, Y_train = lstm.under_sample_training_data(X_train, Y_train)
 
-    # link to file https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.bin.gz
-    fasttext_model = fasttext.load_model('cc.en.300.bin')
-
-    encoder = LabelBinarizer()
     # Transform string labels to one-hot encodings
-    labels = encoder.fit_transform(Y_train)  # Use encoder.classes_ to find mapping back
+    encoder = LabelBinarizer()
+    # encoder = LabelEncoder()
+    Y_train_bin = encoder.fit_transform(Y_train)
+    Y_dev_bin = encoder.fit_transform(Y_dev)
 
     if lstm.args.load_model:
         model = lstm.load_keras_model()
@@ -171,17 +204,34 @@ if __name__ == "__main__":
         # train
         print('Training model')
 
-        # Transform words to fasttext embeddings
-        embedded_data = lstm.vectorizer(X_train, fasttext_model)
+        # read GloVe word embeddings
+        embeddings = lstm.read_embeddings('glove.6B.300d')
+
+        # TextVectorization
+        vectorizer = TextVectorization(standardize=None, output_sequence_length=50)
+        text_ds = tf.data.Dataset.from_tensor_slices(X_train + X_dev)
+        vectorizer.adapt(text_ds)
+        voc = vectorizer.get_vocabulary()
+
+        emb_matrix = lstm.get_emb_matrix(voc, embeddings)
+
+        # Transform input to vectorized input
+        X_train_vect = vectorizer(np.array([[s] for s in X_train])).numpy()
+        X_dev_vect = vectorizer(np.array([[s] for s in X_dev])).numpy()
 
         # create and train model
-        model = lstm.create_model(embedded_data, labels)
-      
-        model = lstm.train_model(model, embedded_data, labels)
+        model = lstm.create_model(Y_train_bin, emb_matrix)
+
         model.summary()
-      
+
+        model = lstm.train_model(model, X_train_vect, Y_train_bin, X_dev_vect, Y_dev_bin)
+        
+        print('saving model')
         # save model 
         lstm.save_keras_model(model)
+
+
+    sys.exit(0)
     
     # run test
     if lstm.args.test and not lstm.args.cop:
