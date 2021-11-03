@@ -108,7 +108,7 @@ class LSTM_Embeddings(BaseModel):
 
         model = Sequential()
         model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix),trainable=False))
-        model.add(LSTM(3))
+        model.add(LSTM(5))
         model.add(Dense(input_dim=embedding_dim, units=num_labels, activation="sigmoid"))
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
         return model
@@ -172,6 +172,11 @@ class LSTM_Embeddings(BaseModel):
         Y_pred = model.predict(X_test)
 
         print(f'Predictions {Y_pred[:5]}')
+
+        Y_pred[Y_pred <= 0.5] = 0
+        Y_pred[Y_pred > 0.5] = 1
+
+        print(f'Predictions rounded {Y_pred[:5]}')
         
         # Finally, convert to numerical labels to get scores with sklearn
         # Y_pred = np.argmax(Y_pred, axis=1)
@@ -179,8 +184,7 @@ class LSTM_Embeddings(BaseModel):
         # print(f'Predictions {Y_pred[:5]}')
         # If you have gold data, you can calculate accuracy
         print(f'Gold labels {Y_test[:5]}')
-        Y_test = np.argmax(Y_test, axis=1)
-        print(ident)
+ 
         print(classification_report(Y_test, Y_pred))
 
 
