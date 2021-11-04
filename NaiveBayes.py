@@ -94,7 +94,7 @@ class NaiveBayes(BaseModel):
 
     def perform_classification(self, model, X, Y):
         Y_pred = model.predict(X)
-        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center']))
+        print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center'], digits=4))
         return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
  
     def write_run_to_file(self, parameters, results):
