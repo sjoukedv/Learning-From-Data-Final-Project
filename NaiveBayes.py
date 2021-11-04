@@ -125,12 +125,6 @@ if __name__ == "__main__":
 
     nb.param_grid = {
         'cls__alpha': [1.0, 0.75, 0.5],
-        # 'cls__fit_prior': [True, False],
-        # 'vec__ngram_range' : [(1,1), (1,2), (1,3), (2,3)],
-        # 'vec__analyzer': ['word', 'char', 'char_wb'],
-        # 'vec__max_df': [1.0, 0.9, 0.8],
-        # 'vec__min_df': [1, 0.9, 0.8],
-        # 'vec__max_features': [4,8, None],
     }
 
     if nb.args.load_model:
