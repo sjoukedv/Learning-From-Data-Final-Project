@@ -33,3 +33,4 @@ All models extend the `BaseModel` in (`BaseModel.py`). By default the COP editio
 
 The models can be found by accessing the following link: https://drive.google.com/drive/folders/1JfQFrZX9uBOetMH5qlbwjZHWD_vZPEo5?usp=sharing
 - Please download the model and put them in the corresponding folder under models/
+- Unfortunately, due to a bug in keras, it is not possible to load the trained Bert models. 
