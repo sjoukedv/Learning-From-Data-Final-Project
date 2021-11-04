@@ -95,16 +95,11 @@ class LSTM_Embeddings(BaseModel):
         return embedding_matrix
 
     def create_model(self, Y_train, emb_matrix): 
-        learning_rate = 0.01
         loss_function = 'binary_crossentropy'
-        # optim = SGD(learning_rate=learning_rate)
         optim = "adam"
-
         embedding_dim = len(emb_matrix[0])
         num_tokens = len(emb_matrix)
         num_labels = len(Y_train[0])
-        # num_labels = 1
-        print(f'emd_dim {embedding_dim}, num_tok {num_tokens}, num_lab {num_labels}')
 
         model = Sequential()
         model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix),trainable=False))
@@ -113,19 +108,18 @@ class LSTM_Embeddings(BaseModel):
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
         return model
 
-    def train_model(self, model, X_train, Y_train, X_dev, Y_dev):
+    def train_model(self, model, X_train, Y_train):
         '''Train the model here. Note the different settings you can experiment with!'''
         # Potentially change these to cmd line args again
         # And yes, don't be afraid to experiment!
         verbose = 1
-        epochs = 10 #default 10
+        epochs = 50 #default 10
         batch_size = 32 #default 32
 
         callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
 
         # Fit the model to our data
-        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, callbacks=[callback], batch_size=batch_size, validation_data=(X_dev, Y_dev))
-        self.test_set_predict(model, X_dev, Y_dev, "dev")
+        model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, callbacks=[callback], batch_size=batch_size, validation_split=0.1)
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -145,48 +139,21 @@ class LSTM_Embeddings(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w')) 
 
-    def perform_classification(self, model, X, Y, fasttext_model, encoder):
-        test_embedded_data = self.vectorizer(X, fasttext_model)
-        # encode gold labels
-        true_articles = encoder.fit_transform(Y)
+    def perform_classification(self, model, X, Y, vectorizer, encoder):
 
-        # true_articles = np.argmax(true_articles, axis=1)
-        # predict embedded data
+        Y__bin = encoder.fit_transform(Y)
+        X_vect = vectorizer(np.array([[s] for s in X])).numpy()
 
-        # print(f'Dif array {embedded_data[0] - embedded_data[1]}')
-     
+        Y_pred = model.predict(X_vect)
+        Y_pred[Y_pred <= 0.5] = 0
+        Y_pred[Y_pred > 0.5] = 1
 
-        y_pred = model.predict(test_embedded_data, verbose=1)
-
-        # Y_pred = np.argmax(Y_pred, axis=1)
-        # convert to nearest integer
-        # y_pred = np.rint(y_pred, casting='unsafe').astype(int, casting='unsafe')
-
-        print(f'pred labels {type(y_pred)}{y_pred[:50].tolist()}')
-        print(f'true labels {type(true_articles)}{true_articles[:50].tolist()}')
-        print(classification_report(y_pred, true_articles, labels=encoder.classes_))
+        print(classification_report(Y__bin, Y_pred, target_names=['left-center', 'right-center']))
+        return classification_report(Y__bin, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
 
     def test_set_predict(self, model, X_test, Y_test, ident):
         '''Do predictions and measure accuracy on our own test set (that we split off train)'''
         # Get predictions using the trained model
-        Y_pred = model.predict(X_test)
-
-        print(f'Predictions {Y_pred[:5]}')
-
-        Y_pred[Y_pred <= 0.5] = 0
-        Y_pred[Y_pred > 0.5] = 1
-
-        print(f'Predictions rounded {Y_pred[:5]}')
-        
-        # Finally, convert to numerical labels to get scores with sklearn
-        # Y_pred = np.argmax(Y_pred, axis=1)
-
-        # print(f'Predictions {Y_pred[:5]}')
-        # If you have gold data, you can calculate accuracy
-        print(f'Gold labels {Y_test[:5]}')
- 
-        print(classification_report(Y_test, Y_pred))
-
 
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
@@ -198,9 +165,7 @@ if __name__ == "__main__":
 
     # Transform string labels to one-hot encodings
     encoder = LabelBinarizer()
-    # encoder = LabelEncoder()
     Y_train_bin = encoder.fit_transform(Y_train)
-    Y_dev_bin = encoder.fit_transform(Y_dev)
 
     if lstm.args.load_model:
         model = lstm.load_keras_model()
@@ -211,9 +176,8 @@ if __name__ == "__main__":
         # read GloVe word embeddings
         embeddings = lstm.read_embeddings('glove.6B.300d')
 
-        # TextVectorization
         vectorizer = TextVectorization(standardize=None, output_sequence_length=50)
-        text_ds = tf.data.Dataset.from_tensor_slices(X_train + X_dev)
+        text_ds = tf.data.Dataset.from_tensor_slices(X_train)
         vectorizer.adapt(text_ds)
         voc = vectorizer.get_vocabulary()
 
@@ -221,35 +185,32 @@ if __name__ == "__main__":
 
         # Transform input to vectorized input
         X_train_vect = vectorizer(np.array([[s] for s in X_train])).numpy()
-        X_dev_vect = vectorizer(np.array([[s] for s in X_dev])).numpy()
 
         # create and train model
         model = lstm.create_model(Y_train_bin, emb_matrix)
 
         model.summary()
 
-        model = lstm.train_model(model, X_train_vect, Y_train_bin, X_dev_vect, Y_dev_bin)
+        model = lstm.train_model(model, X_train_vect, Y_train_bin)
         
         print('saving model')
         # save model 
         lstm.save_keras_model(model)
 
-
-    sys.exit(0)
     
     # run test
     if lstm.args.test and not lstm.args.cop:
         print('Using best estimator on Test set')
-        results = lstm.perform_classification(model, X_test, Y_test, fasttext_model, encoder)
+        results = lstm.perform_classification(model, X_test, Y_test, vectorizer, encoder)
     # run dev
     elif not lstm.args.cop:
         print('Using best estimator on Dev set')
-        results = lstm.perform_classification(model, X_dev, Y_dev, fasttext_model, encoder)
+        results = lstm.perform_classification(model, X_dev, Y_dev, vectorizer, encoder)
     
     # test model with COP25 edition
     if lstm.args.cop:
         print(f'Predicting {lstm.args.cop}')
         X_cop, Y_cop = read_single(lstm.args.cop)
-        results = lstm.perform_classification(model, X_cop, Y_cop, fasttext_model, encoder)
+        results = lstm.perform_classification(model, X_cop, Y_cop, vectorizer, encoder)
 
     lstm.write_run_to_file(vars(lstm.args), results)
