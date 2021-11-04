@@ -30,3 +30,7 @@ All models extend the `BaseModel` in (`BaseModel.py`). By default the COP editio
 - LSTM, an optimized LSTM model with pretrained static embeddings 
 - BERT, a fine-tuned pretrained language model 
 - FastText, [Open-source, free, lightweight library](https://fasttext.cc/) that allows users to learn text representations and text classifiers.
+
+The models can be found by accessing the following link: https://drive.google.com/drive/folders/1JfQFrZX9uBOetMH5qlbwjZHWD_vZPEo5?usp=sharing
+- Please download the model and put them in the corresponding folder under models/
+- Unfortunately, due to a bug in keras, it is not possible to load the trained Bert models. 
