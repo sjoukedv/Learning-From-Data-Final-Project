@@ -1,0 +1,39 @@
+{
+    "parameters": {
+        "test": true,
+        "load_model": false,
+        "cop": null,
+        "batch_size": 16,
+        "epochs": 50,
+        "max_length": 40,
+        "undersample": true,
+        "model_number": "00"
+    },
+    "results": {
+        "left-center": {
+            "precision": 0.8815450643776824,
+            "recall": 0.9289914066033469,
+            "f1-score": 0.9046465536225502,
+            "support": 2211
+        },
+        "right-center": {
+            "precision": 0.8311827956989247,
+            "recall": 0.7368922783603432,
+            "f1-score": 0.7812026275896917,
+            "support": 1049
+        },
+        "accuracy": 0.8671779141104294,
+        "macro avg": {
+            "precision": 0.8563639300383036,
+            "recall": 0.8329418424818451,
+            "f1-score": 0.8429245906061209,
+            "support": 3260
+        },
+        "weighted avg": {
+            "precision": 0.865339536818168,
+            "recall": 0.8671779141104294,
+            "f1-score": 0.8649248731291549,
+            "support": 3260
+        }
+    }
+}
