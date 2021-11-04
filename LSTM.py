@@ -14,12 +14,9 @@ import sys
 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Embedding, TextVectorization
-from tensorflow.keras.optimizers import SGD
-from keras.callbacks import EarlyStopping
 from keras.initializers import Constant
 
-from sklearn.model_selection import KFold
-from sklearn.preprocessing import LabelBinarizer, LabelEncoder
+from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import classification_report
 
 from dataParser import read_articles, read_single
