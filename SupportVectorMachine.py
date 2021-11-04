@@ -134,10 +134,10 @@ if __name__ == "__main__":
         X_train, Y_train = svm.under_sample_training_data(X_train, Y_train)
 
     svm.param_grid = {
-            'union__tf_idf__max_df': [1.0, 0.75, 0.5],
-            'union__tf_idf__min_df': [0.0001, 0.001, 0.01],
-            'union__tf_idf__ngram_range': [(1,3), (2,3), (3,3)],
-            'cls__C': [0.1, 0.5, 0.05]
+            'union__tf_idf__max_df': [0.5],
+            'union__tf_idf__min_df': [0.0001],
+            'union__tf_idf__ngram_range': [(1,3)],
+            'cls__C': [0.5]
         }
 
     if svm.args.load_model:
