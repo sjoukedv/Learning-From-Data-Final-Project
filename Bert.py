@@ -5,7 +5,7 @@
 import os
 # DEBUG
 # fixes cudart64_110.dll error
-# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
 
 import sys
 import argparse
@@ -65,7 +65,7 @@ class Bert(BaseModel):
         {
             "command": "-batch_size",
             "refer": "--batch_size",
-            "default": 16,
+            "default": 32,
             "action": None,
             "type": int,
             "help": "Batch size"
@@ -73,7 +73,7 @@ class Bert(BaseModel):
         {
             "command": "-epochs",
             "refer": "--epochs",
-            "default": 50,
+            "default": 2,
             "action": None,
             "type": int,
             "help": "Epochs"
@@ -81,7 +81,7 @@ class Bert(BaseModel):
         {
             "command": "-max_length",
             "refer": "--max_length",
-            "default": 200,
+            "default": 40,
             "action": None,
             "type": int,
             "help": "Max length"
@@ -97,7 +97,7 @@ class Bert(BaseModel):
 
     # Create the model 
     def create_model(self, model): 
-        loss_function = BinaryCrossentropy()
+        loss_function = 'binary_crossentropy'
 
         starter_learning_rate = 5e-5
         end_learning_rate = 5e-6
@@ -109,9 +109,11 @@ class Bert(BaseModel):
             power=0.5
         )
 
-        optim = Adam(learning_rate=learning_rate_fn)
+        # optim = Adam(learning_rate=learning_rate_fn)
+        optim = SGD(learning_rate=learning_rate_fn)
 
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
+        model.summary()
         return model
 
     # Train the model
@@ -125,7 +127,9 @@ class Bert(BaseModel):
         callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
 
         # Finally fit the model to our data
-        model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=self.args.epochs, batch_size=self.args.batch_size, validation_data=(tokens_test, Y_test_bin))
+        # model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=self.args.epochs, batch_size=self.args.batch_size, validation_data=(tokens_test, Y_test_bin))
+        model.fit(tokens_train, Y_train_bin, verbose=verbose, callbacks=[callback], epochs=self.args.epochs, batch_size=self.args.batch_size, validation_split=0.1)
+
         return model
 
     def write_run_to_file(self, parameters, results):
@@ -153,12 +157,16 @@ class Bert(BaseModel):
 
         labels_Y = encoder.fit_transform(Y)
 
-        Y_test_predict = np.argmax(model.predict(tokens_X, verbose=2)["logits"], axis = 1)
-        print(Y_test_predict)
-        print(labels_Y)
-        print(classification_report(Y_test_predict, labels_Y, target_names=['left-center', 'right-center']))
+        Y_test = model.predict(tokens_X, verbose=2)["logits"]
+        print(Y_test[:10])
+
+        print(labels_Y[:10])
+
+        # TODO remove and run predictions
+        sys.exit(0)
+        print(classification_report(Y_test, labels_Y, target_names=['left-center', 'right-center']))
         
-        return classification_report(Y_test_predict, labels_Y, output_dict=True, target_names=['left-center', 'right-center'])
+        return classification_report(Y_test, labels_Y, output_dict=True, target_names=['left-center', 'right-center'])
 
     def perform_cross_validation(self):
         pass
@@ -185,8 +193,8 @@ if __name__ == "__main__":
 
         model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=2)
 
-        tokens_train = tokenizer(X_train, padding=True, max_length=200,truncation=True, return_tensors="np").data
-        tokens_test = tokenizer(X_dev, padding=True, max_length=200,truncation=True, return_tensors="np").data
+        tokens_train = tokenizer(X_train, padding=True, max_length=bert.args.max_length,truncation=True, return_tensors="np").data
+        tokens_test = tokenizer(X_dev, padding=True, max_length=bert.args.max_length,truncation=True, return_tensors="np").data
 
         labels_train = encoder.fit_transform(Y_train)
         labels_test = encoder.fit_transform(Y_dev)
