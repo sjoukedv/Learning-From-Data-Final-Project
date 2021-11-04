@@ -1,20 +1,39 @@
 {
     "parameters": {
-        "input_file": "reviews.txt",
-        "test_percentage": 0.2
+        "test": false,
+        "load_model": false,
+        "cop": null,
+        "batch_size": 32,
+        "epochs": 50,
+        "max_length": 40,
+        "undersample": true,
+        "model_number": "00"
     },
-    "results": [
-        {
-            "1": [
-                0.3603789210319519,
-                0.892307698726654
-            ]
+    "results": {
+        "left-center": {
+            "precision": 0.8537913699204022,
+            "recall": 0.9514472455648926,
+            "f1-score": 0.8999779200706557,
+            "support": 2142
         },
-        {
-            "2": [
-                0.05264173820614815,
-                0.9860140085220337
-            ]
+        "right-center": {
+            "precision": 0.8807339449541285,
+            "recall": 0.6875559534467324,
+            "f1-score": 0.7722473604826546,
+            "support": 1117
+        },
+        "accuracy": 0.8610003068425898,
+        "macro avg": {
+            "precision": 0.8672626574372653,
+            "recall": 0.8195015995058125,
+            "f1-score": 0.8361126402766552,
+            "support": 3259
+        },
+        "weighted avg": {
+            "precision": 0.8630257535695804,
+            "recall": 0.8610003068425898,
+            "f1-score": 0.8561991428200275,
+            "support": 3259
         }
-    ]
+    }
 }
