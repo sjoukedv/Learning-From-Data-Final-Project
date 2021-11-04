@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 
-'''LSTM fasttext classifier '''
+'''BERT classifier '''
+
+import os
+# DEBUG
+# fixes cudart64_110.dll error
+# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
 
 import sys
 import argparse
 import random
 import time
 import spacy
-import os
 import json
 import numpy as np
 import tensorflow as tf

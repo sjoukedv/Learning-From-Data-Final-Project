@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-'''LSTM fasttext classifier '''
+'''LSTM GloVe classifier '''
 
 import os
 # DEBUG
 # fixes cudart64_110.dll error
-os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
+
 import json
 import numpy as np
 import tensorflow as tf
