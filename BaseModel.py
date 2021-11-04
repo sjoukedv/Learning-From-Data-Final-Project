@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import json, argparse, os
+import argparse, os
 from joblib import dump, load
 from tensorflow import keras
 from imblearn.under_sampling import RandomUnderSampler

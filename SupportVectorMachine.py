@@ -6,17 +6,12 @@
 
 import os
 import json
-import sys
-import argparse
-import random
-import time
 import spacy
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.svm import SVC, LinearSVC
+from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.metrics import classification_report, accuracy_score, make_scorer
-from sklearn.model_selection import cross_validate, cross_val_score
+from sklearn.metrics import classification_report
 
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 

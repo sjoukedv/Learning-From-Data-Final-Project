@@ -7,31 +7,17 @@ import os
 # fixes cudart64_110.dll error
 # os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/bin")
 
-import sys
-import argparse
-import random
-import time
-import spacy
 import json
 import numpy as np
 import tensorflow as tf
 
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout, Embedding, Activation, GlobalAveragePooling1D
-from keras.initializers import Constant
-from tensorflow.keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
-from keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
 
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.svm import SVC, LinearSVC
-from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.metrics import classification_report, accuracy_score, make_scorer
-from sklearn.model_selection import cross_validate, cross_val_score, KFold
+from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelBinarizer
 
 from transformers import TFAutoModelForSequenceClassification
 from transformers import AutoTokenizer
-from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 
 from dataParser import read_articles, read_single
