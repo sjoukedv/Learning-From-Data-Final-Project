@@ -33,38 +33,6 @@ class SupportVectorMachine(BaseModel):
                 "type:": int,
                 "help": "Determines the cross-validation splitting strategy"
             },
-            {
-                "command": "-C",
-                "refer": "--C",
-                "default": 0.5,
-                "action": None,
-                "type": float,
-                "help": "Regularization parameter"
-            },
-            {
-                "command": "-min_df",
-                "refer": "--min_df",
-                "default": 0.0001,
-                "action": None,
-                "type": float,
-                "help": "Minimum document frequency"
-            },
-            {
-                "command": "-max_df",
-                "refer": "--max_df",
-                "default": 0.8,
-                "action": None,
-                "type": float,
-                "help": "Maximum document frequency"
-            },
-            {
-                "command": "-ngram_range",
-                "refer": "--ngram_range",
-                "default": (1,3),
-                "action": None,
-                "type": tuple,
-                "help": "The lower and upper boundary of the range of n-value for different n-grams"
-            },
             { 
                 "command": "-test",
                 "refer": "--test",
