@@ -149,15 +149,12 @@ class Bert(BaseModel):
 
         labels_Y = encoder.fit_transform(Y)
 
-        Y_test_predict = model.predict(tokens_X, verbose=2)
+        Y_test_predict = np.argmax(model.predict(tokens_X, verbose=2)["logits"], axis = 1)
         print(Y_test_predict)
         print(labels_Y)
-        print(classification_report(Y_test_predict, labels_Y, labels=encoder.classes_))
+        print(classification_report(Y_test_predict, labels_Y, target_names=['left-center', 'right-center']))
         
-        scores = model.evaluate(tokens_X, labels_Y, verbose=2)
-        print(f'test loss: {scores[0]}, test acc:{scores[1]}')
-
-        return results
+        return classification_report(Y_test_predict, labels_Y, output_dict=True, target_names=['left-center', 'right-center'])
 
     def perform_cross_validation(self):
         pass
@@ -182,7 +179,7 @@ if __name__ == "__main__":
         # train
         print('Training model')
 
-        model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=6)
+        model = TFAutoModelForSequenceClassification.from_pretrained(lm, num_labels=2)
 
         tokens_train = tokenizer(X_train, padding=True, max_length=200,truncation=True, return_tensors="np").data
         tokens_test = tokenizer(X_dev, padding=True, max_length=200,truncation=True, return_tensors="np").data
