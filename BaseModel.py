@@ -5,6 +5,7 @@ from tensorflow import keras
 from imblearn.under_sampling import RandomUnderSampler
 import numpy as np
 
+# Base model which has basic functionality 
 class BaseModel(ABC):
     def __init__(self):
         self.name = "BaseModel"
@@ -69,6 +70,7 @@ class BaseModel(ABC):
 
         self.args = self.create_arg_parser()
 
+    # Method used to create the argument parser
     def create_arg_parser(self):
         parser = argparse.ArgumentParser()
 
@@ -118,6 +120,7 @@ class BaseModel(ABC):
     def perform_classification(self):  
         pass
 
+    
     def write_run_to_file(self, parameters, results):
         pass
 

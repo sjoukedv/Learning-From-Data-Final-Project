@@ -23,6 +23,7 @@ from tensorflow.keras.optimizers import Adam
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
+# Bidirectional Encoder Representations from Transformers model
 class Bert(BaseModel):
     def __init__(self):
         self.arguments = [
@@ -143,6 +144,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(lm)
 
     if bert.args.load_model:
+        # Not working due to a keras bug unfortunately
         model = bert.load_keras_model()
     else:
         # train
