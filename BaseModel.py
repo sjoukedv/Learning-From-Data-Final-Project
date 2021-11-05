@@ -9,7 +9,7 @@ class BaseModel(ABC):
     def __init__(self):
         self.name = "BaseModel"
 
-        # Add argument for down sampling
+        # Add argument for under sampling
         self.arguments.append(
             {
                 "command": "-undersample",
@@ -87,7 +87,7 @@ class BaseModel(ABC):
     def write_run_to_file(self, parameters, results):
         pass
 
-    # store model to file {self.name}.model.joblib
+    # Store skicit learn model
     def save_sk_model(self, model):
         res_dir = 'models/' + self.name
         # make sure (sub)directory exists
@@ -102,11 +102,12 @@ class BaseModel(ABC):
         print(f'Storing model to {store_location}')
         dump(model, store_location)
 
-    # load model to file {self.name}.model.joblib
+    # Load skicit learn model
     def load_sk_model(self):
         print(f'models/{self.name}/{self.name}.{self.args.model_number}.sk.model')
         return load(f'models/{self.name}/{self.name}.{self.args.model_number}.sk.model')
 
+    # Method used to save a keras model
     def save_keras_model(self, model):
         res_dir = 'models/' + self.name
         # make sure (sub)directory exists
@@ -121,12 +122,10 @@ class BaseModel(ABC):
         print(f'Storing model to {store_location}')
         model.save(store_location)
 
+    # Method used to load a keras model
     def load_keras_model(self):
         print(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
         
         model = keras.models.load_model(f'models/{self.name}/{self.name}.{self.args.model_number}.keras.model')
-        
-        #if self.name == 'Bert':
-            #model.load_weights(f'models/{self.name}/{self.name}.{self.args.model_number}.h5')
         
         return model

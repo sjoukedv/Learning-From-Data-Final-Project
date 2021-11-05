@@ -149,10 +149,6 @@ class LSTM_Embeddings(BaseModel):
         print(classification_report(Y__bin, Y_pred, target_names=['left-center', 'right-center']))
         return classification_report(Y__bin, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
 
-    def test_set_predict(self, model, X_test, Y_test, ident):
-        '''Do predictions and measure accuracy on our own test set (that we split off train)'''
-        # Get predictions using the trained model
-
 if __name__ == "__main__":
     lstm = LSTM_Embeddings()
 

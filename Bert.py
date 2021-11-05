@@ -115,6 +115,7 @@ class Bert(BaseModel):
 
         return model
 
+    # Method used to write results to file
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
         # make sure (sub)directory exists
@@ -134,6 +135,7 @@ class Bert(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w'))
 
+    # Method which performs prediction and fetches the classification report
     def perform_classification(self, model, X, Y, tokenizer, encoder):
         tokens_X = tokenizer(X, padding=True, max_length=self.args.max_length,truncation=True, return_tensors="np").data
 
@@ -147,9 +149,6 @@ class Bert(BaseModel):
         print(classification_report(Y_test, labels_Y, target_names=['left-center', 'right-center']))
         
         return classification_report(Y_test, labels_Y, output_dict=True, target_names=['left-center', 'right-center'])
-
-    def perform_cross_validation(self):
-        pass
 
 if __name__ == "__main__":
     bert = Bert()
