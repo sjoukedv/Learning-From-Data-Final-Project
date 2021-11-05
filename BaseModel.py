@@ -33,6 +33,40 @@ class BaseModel(ABC):
             },
         )
 
+        # Add argument for running on test set
+        self.arguments.append(
+            { 
+                "command": "-test",
+                "refer": "--test",
+                "default": False,
+                "action": "store_true",
+                "help": "Run predictions on test set (otherwise uses dev set)"
+            }
+        )
+
+        # Add argument for loading a model 
+        self.arguments.append(
+            { 
+                "command": "-load",
+                "refer": "--load_model",
+                "default": False,
+                "action": "store_true",
+                "help": "Load existing model or perform training"
+            }
+        )
+
+        # Add argument for using COP
+        self.arguments.append(
+            {
+                "command": "-cop",
+                "refer": "--cop",
+                "default": None,
+                "action": None,
+                "type:": str,
+                "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
+            }
+        )
+
         self.args = self.create_arg_parser()
 
     def create_arg_parser(self):

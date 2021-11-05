@@ -26,28 +26,6 @@ from BaseModel import BaseModel
 class Bert(BaseModel):
     def __init__(self):
         self.arguments = [
-        { 
-            "command": "-test",
-            "refer": "--test",
-            "default": False,
-            "action": "store_true",
-            "help": "Run predictions on test set (otherwise uses dev set)"
-        },
-        { 
-            "command": "-load",
-            "refer": "--load_model",
-            "default": False,
-            "action": "store_true",
-            "help": "Load existing model or perform training"
-        },
-        {
-            "command": "-cop",
-            "refer": "--cop",
-            "default": None,
-            "action": None,
-            "type:": str,
-            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
-        },
         {
             "command": "-batch_size",
             "refer": "--batch_size",
