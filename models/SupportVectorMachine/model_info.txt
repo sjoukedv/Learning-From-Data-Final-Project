@@ -1,0 +1,7 @@
+SupportVectorMachine.00.sk.model
+- This model contains the trained SVM with undersampling.
+- Results for the dev and test set can be found in experiment_00 and experiment_01 respectively
+
+SupportVectorMachine.01.sk.model
+- This model contains the trained SVM without undersampling.
+- Results for the dev and test set can be found in experiment_02 and experiment_03 respectively

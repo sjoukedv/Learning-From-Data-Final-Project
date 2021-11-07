@@ -130,3 +130,6 @@ dmypy.json
 
 # COP Data files
 data/
+
+# pre-trained vectors
+cc.en.300.bin

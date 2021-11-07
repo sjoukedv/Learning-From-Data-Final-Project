@@ -1,0 +1,8 @@
+tensorflow
+sklearn
+numpy
+spacy 
+matplotlib
+fasttext 
+imbalanced-learn
+transformers

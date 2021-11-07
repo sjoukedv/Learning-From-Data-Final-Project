@@ -1,0 +1,39 @@
+{
+    "parameters": {
+        "test": false,
+        "load_model": false,
+        "cop": null,
+        "batch_size": 8,
+        "epochs": 50,
+        "max_length": 40,
+        "undersample": true,
+        "model_number": "00"
+    },
+    "results": {
+        "left-center": {
+            "precision": 0.8146453089244852,
+            "recall": 0.994413407821229,
+            "f1-score": 0.8955974842767296,
+            "support": 358
+        },
+        "right-center": {
+            "precision": 0.9629629629629629,
+            "recall": 0.39097744360902253,
+            "f1-score": 0.5561497326203209,
+            "support": 133
+        },
+        "accuracy": 0.8309572301425662,
+        "macro avg": {
+            "precision": 0.888804135943724,
+            "recall": 0.6926954257151258,
+            "f1-score": 0.7258736084485252,
+            "support": 491
+        },
+        "weighted avg": {
+            "precision": 0.8548209667393885,
+            "recall": 0.8309572301425662,
+            "f1-score": 0.8036493152944436,
+            "support": 491
+        }
+    }
+}
