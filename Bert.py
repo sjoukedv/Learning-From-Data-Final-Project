@@ -23,31 +23,10 @@ from tensorflow.keras.optimizers import Adam
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
+# Bidirectional Encoder Representations from Transformers model
 class Bert(BaseModel):
     def __init__(self):
         self.arguments = [
-        { 
-            "command": "-test",
-            "refer": "--test",
-            "default": False,
-            "action": "store_true",
-            "help": "Run predictions on test set (otherwise uses dev set)"
-        },
-        { 
-            "command": "-load",
-            "refer": "--load_model",
-            "default": False,
-            "action": "store_true",
-            "help": "Load existing model or perform training"
-        },
-        {
-            "command": "-cop",
-            "refer": "--cop",
-            "default": None,
-            "action": None,
-            "type:": str,
-            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
-        },
         {
             "command": "-batch_size",
             "refer": "--batch_size",
@@ -165,6 +144,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(lm)
 
     if bert.args.load_model:
+        # Not working due to a keras bug unfortunately
         model = bert.load_keras_model()
     else:
         # train

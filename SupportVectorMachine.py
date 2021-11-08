@@ -17,6 +17,7 @@ from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 from sklearn.model_selection import GridSearchCV
 
+# Support vector machine model
 class SupportVectorMachine(BaseModel):
     def __init__(self):
         self.arguments = [
@@ -28,28 +29,6 @@ class SupportVectorMachine(BaseModel):
                 "type:": int,
                 "help": "Determines the cross-validation splitting strategy"
             },
-            { 
-                "command": "-test",
-                "refer": "--test",
-                "default": False,
-                "action": "store_true",
-                "help": "Run predictions on test set (otherwise uses dev set)"
-            },
-            { 
-                "command": "-load",
-                "refer": "--load_model",
-                "default": False,
-                "action": "store_true",
-                "help": "Load existing model or perform training"
-            },
-            {
-                "command": "-cop",
-                "refer": "--cop",
-                "default": None,
-                "action": None,
-                "type:": str,
-                "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
-            },
         ]
 
         super().__init__()
@@ -59,8 +38,8 @@ class SupportVectorMachine(BaseModel):
         # load spacy
         self.nlp = spacy.load('en_core_web_sm')
 
+    # Method that returns lowercase of the input
     def identity(self, x):
-        '''Dummy function that just returns the lowercase of the input'''
         return x.lower()
 
     def smartJoin(self, x):
@@ -85,6 +64,7 @@ class SupportVectorMachine(BaseModel):
             verbose=3
         )
 
+    # Train the model using best parameters
     def train_model(self, model, X_train, Y_train):
         model = model.fit(X_train, Y_train)
       
@@ -102,6 +82,7 @@ class SupportVectorMachine(BaseModel):
         print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center'], digits=4))
         return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'], digits=3)
 
+    # Write results to a file
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
         # make sure (sub)directory exists
@@ -128,6 +109,7 @@ if __name__ == "__main__":
     if svm.args.undersample:
         X_train, Y_train = svm.under_sample_training_data(X_train, Y_train)
 
+    # Optimal parameters from running gridsearch are set here
     svm.param_grid = {
             'union__tf_idf__max_df': [0.5],
             'union__tf_idf__min_df': [0.0001],

@@ -17,6 +17,7 @@ from sklearn.model_selection import GridSearchCV
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
+# Naive bayes model
 class NaiveBayes(BaseModel):
     def __init__(self):
         self.arguments = [
@@ -36,36 +37,16 @@ class NaiveBayes(BaseModel):
             "type:": int,
             "help": "Determines the cross-validation splitting strategy"
         },
-        { 
-            "command": "-test",
-            "refer": "--test",
-            "default": False,
-            "action": "store_true",
-            "help": "Run predictions on test set (otherwise uses dev set)"
-        },
-        { 
-            "command": "-load",
-            "refer": "--load_model",
-            "default": False,
-            "action": "store_true",
-            "help": "Load existing model or perform training"
-        },
-        {
-            "command": "-cop",
-            "refer": "--cop",
-            "default": None,
-            "action": None,
-            "type:": str,
-            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
-        },
         ]
 
         super().__init__()
         self.name = "NaiveBayes"
 
+    # Returns the identity in lowercase
     def identity(self, x):
         return x.lower()
 
+    # Create the classification model
     def create_model(self):
         if self.args.tfidf:
             vec = TfidfVectorizer(preprocessor=self.identity, tokenizer=self.identity)
@@ -81,6 +62,7 @@ class NaiveBayes(BaseModel):
             verbose=2
             )
     
+    # Train the model using specified data
     def train_model(self, model, X_train, Y_train):
         model = model.fit(X_train, Y_train)
       
@@ -92,11 +74,13 @@ class NaiveBayes(BaseModel):
         # return best estimator
         return model.best_estimator_
 
+    # Perform predictions and return classification report
     def perform_classification(self, model, X, Y):
         Y_pred = model.predict(X)
         print(classification_report(Y, Y_pred, target_names=['left-center', 'right-center'], digits=4))
         return classification_report(Y, Y_pred, output_dict=True, target_names=['left-center', 'right-center'])
  
+    # Write the results to a file
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
         # make sure (sub)directory exists

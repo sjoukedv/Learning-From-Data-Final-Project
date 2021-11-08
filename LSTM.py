@@ -22,6 +22,7 @@ from sklearn.metrics import classification_report
 from dataParser import read_articles, read_single
 from BaseModel import BaseModel 
 
+# Long short term memory model 
 class LSTM_Embeddings(BaseModel):
     def __init__(self):
         self.arguments = [
@@ -33,28 +34,6 @@ class LSTM_Embeddings(BaseModel):
             "type:": int,
             "help": "Determines the cross-validation splitting strategy"
         },
-        { 
-            "command": "-test",
-            "refer": "--test",
-            "default": False,
-            "action": "store_true",
-            "help": "Run predictions on test set (otherwise uses dev set)"
-        },
-        { 
-            "command": "-load",
-            "refer": "--load_model",
-            "default": False,
-            "action": "store_true",
-            "help": "Load existing model or perform training"
-        },
-        {
-            "command": "-cop",
-            "refer": "--cop",
-            "default": None,
-            "action": None,
-            "type:": str,
-            "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
-        },
         ]
 
         super().__init__()
@@ -64,6 +43,7 @@ class LSTM_Embeddings(BaseModel):
         '''Turn sentence into embeddings, i.e. replace words by the fasttext word vector '''
         return np.array([ model.get_sentence_vector(sample) for sample in samples])
     
+    # Read and return embeddings from specified file
     def read_embeddings(self, embeddings_file):
         word_embeddings = {}
         f = open(embeddings_file + '.txt', 'r', encoding="utf8") 
@@ -92,6 +72,7 @@ class LSTM_Embeddings(BaseModel):
         # Final matrix with pretrained embeddings that we can feed to embedding layer
         return embedding_matrix
 
+    # Create the classification model
     def create_model(self, Y_train, emb_matrix): 
         loss_function = 'binary_crossentropy'
         optim = "adam"
@@ -106,10 +87,8 @@ class LSTM_Embeddings(BaseModel):
         model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
         return model
 
+    # Train the model
     def train_model(self, model, X_train, Y_train):
-        '''Train the model here. Note the different settings you can experiment with!'''
-        # Potentially change these to cmd line args again
-        # And yes, don't be afraid to experiment!
         verbose = 1
         epochs = 50 #default 10
         batch_size = 32 #default 32
@@ -120,6 +99,7 @@ class LSTM_Embeddings(BaseModel):
         model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, callbacks=[callback], batch_size=batch_size, validation_split=0.1)
         return model
 
+    # Write results to a file
     def write_run_to_file(self, parameters, results):
         res_dir = 'results/' + self.name
         # make sure (sub)directory exists
@@ -137,6 +117,7 @@ class LSTM_Embeddings(BaseModel):
         # write results to file
         json.dump(result, open('results/' + self.name + '/' + 'experiment_' + str(version).zfill(2) + '.json', 'w')) 
 
+    # Predict using model and return results
     def perform_classification(self, model, X, Y, vectorizer, encoder):
 
         Y__bin = encoder.fit_transform(Y)

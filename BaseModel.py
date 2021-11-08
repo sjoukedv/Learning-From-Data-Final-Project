@@ -5,6 +5,7 @@ from tensorflow import keras
 from imblearn.under_sampling import RandomUnderSampler
 import numpy as np
 
+# Base model which has basic functionality 
 class BaseModel(ABC):
     def __init__(self):
         self.name = "BaseModel"
@@ -33,8 +34,43 @@ class BaseModel(ABC):
             },
         )
 
+        # Add argument for running on test set
+        self.arguments.append(
+            { 
+                "command": "-test",
+                "refer": "--test",
+                "default": False,
+                "action": "store_true",
+                "help": "Run predictions on test set (otherwise uses dev set)"
+            }
+        )
+
+        # Add argument for loading a model 
+        self.arguments.append(
+            { 
+                "command": "-load",
+                "refer": "--load_model",
+                "default": False,
+                "action": "store_true",
+                "help": "Load existing model or perform training"
+            }
+        )
+
+        # Add argument for using COP
+        self.arguments.append(
+            {
+                "command": "-cop",
+                "refer": "--cop",
+                "default": None,
+                "action": None,
+                "type:": str,
+                "help": "Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)"
+            }
+        )
+
         self.args = self.create_arg_parser()
 
+    # Method used to create the argument parser
     def create_arg_parser(self):
         parser = argparse.ArgumentParser()
 
@@ -84,6 +120,7 @@ class BaseModel(ABC):
     def perform_classification(self):  
         pass
 
+    
     def write_run_to_file(self, parameters, results):
         pass
 

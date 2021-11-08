@@ -10,7 +10,7 @@ This repository contains the learning from final project which analyses data tha
 Option | Description
 --- | ---
 `-test, --test`  | Run predictions on test set (otherwise uses dev set)
-`-load, --load_model` | Load existing model or perform training
+`-load, --load_model` | Load existing model or perform training (e.g. -load 00)
 `-cop COP, --cop COP` | Path to single COP edition to test (e.g. data/COP25.filt3.sub.json)
 `-undersample, --undersample` | Value which indicates whether to downsample the data
 `-model_number MODEL_NUMBER, --model_number MODEL_NUMBER` | Name of model which should be loaded
@@ -33,4 +33,4 @@ All models extend the `BaseModel` in (`BaseModel.py`). By default the COP editio
 
 The models can be found by accessing the following link: https://drive.google.com/drive/folders/1JfQFrZX9uBOetMH5qlbwjZHWD_vZPEo5?usp=sharing
 - Please download the model and put them in the corresponding folder under models/
-- Unfortunately, due to a bug in keras, it is not possible to load the trained Bert models. 
+- Unfortunately, due to a bug in keras, it is not possible to load trained Bert models. 
